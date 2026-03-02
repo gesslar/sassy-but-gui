@@ -1,0 +1,10 @@
+*.vsix
+temp/
+work/
+eslint.config.js
+work/
+temp/
+pnpm-*
+.*
+
+.*/**/*
