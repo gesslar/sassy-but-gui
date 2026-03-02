@@ -5,9 +5,10 @@ class ToolButton extends HTMLElement {
 
   connectedCallback() {
     const icon = this.getAttribute("icon")
+    const kind = this.getAttribute("kind") ?? "primary"
 
     this.innerHTML = `
-    <button class="toolbutton">
+    <button class="toolbutton ${kind}">
       <i class="codicon codicon-${icon}"></i>
     </button>
     `
