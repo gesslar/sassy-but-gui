@@ -4,5 +4,30 @@ body {
   margin: 0;
   padding: 0;
 
-  toolbutton {}
+  button {
+    color: var(--vscode-button-foreground);
+    background-color: transparent;
+    border: none;
+    outline: 1px solid transparent;
+    border-radius: 3px;
+
+    &:hover {
+      color: var(--vscode-button-foreground);
+      background-color: var(--vscode-button-hoverBackground);
+    }
+
+    &.secondary {
+      color: var(--vscode-button-secondaryForeground);
+      background-color: transparent;
+
+      &:hover {
+        background-color: var(--vscode-button-secondaryHoverBackground);
+      }
+    }
+
+    &.toolbutton {
+      margin: 0.2rem 0.2rem;
+      padding: 0.2rem;
+    }
+  }
 }

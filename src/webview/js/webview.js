@@ -13,7 +13,6 @@ class Sassy {
         this.#elements[e.dataset.elementName] = e
       })
 
-    // const refreshButton =
     Notify.on("click", this.#refresh, this.#elements.refreshButton)
   }
 
