@@ -1,0 +1,50 @@
+{
+  "name": "sassy-but-gui",
+  "displayName": "Sassy, but GUI",
+  "version": "1.0.0",
+  "description": "",
+  "main": ".src/ritual-sacrifice-to-cjs.cjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gesslar/sassy-but-gui.git"
+  },
+  "categories": [
+    "Other",
+    "Themes"
+  ],
+  "keywords": [],
+  "author": {
+    "name": "gesslar",
+    "url": "https://github.com/gesslar/sassy-but-gui"
+  },
+  "license": "Unlicense",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/gesslar/sassy-but-gui/issues"
+  },
+  "homepage": "https://github.com/gesslar/sassy-but-gui#readme",
+  "scripts": {
+    "update": "npx npm-check-updates -u && npm install",
+    "pr": "gt submit -p --ai",
+    "lint": "eslint src/",
+    "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix/",
+    "publish:vsce": "npm run package && xdg-open https://marketplace.visualstudio.com/manage/publishers/gesslar",
+    "publish:ovsx": "npm run package && xdg-open https://open-vsx.org/user-settings/extensions",
+    "patch": "npm version patch",
+    "minor": "npm version minor",
+    "major": "npm version major"
+  },
+  "engines": {
+    "vscode": "^1.22.0"
+  },
+  "dependencies": {
+    "@gesslar/sassy": "^4.5.1",
+    "@gesslar/toolkit": "^3.42.0",
+    "@vscode/codicons": "^0.0.44",
+    "@vscode/vsce": "^3.7.1"
+  },
+  "devDependencies": {
+    "@gesslar/uglier": "^2.0.0",
+    "eslint": "^10.0.2"
+  }
+}
