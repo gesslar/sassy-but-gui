@@ -1,0 +1,51 @@
+config:
+  $schema: vscode://schemas/color-theme
+  name: My Amazing Theme
+  type: light
+  custom:
+    semanticHighlighting: false
+
+palette:
+  black: css(black)
+  white: css(white)
+  blue: css(blue)
+
+vars:
+  mainFg: $$black
+  mainBg: $$white
+  accent: $$blue
+
+  std:
+    fg:
+      primary: $(mainFg)
+      accent: complement($(std.bg.accent))
+
+    bg:
+      primary: $(mainBg)
+      accent: lighten($(accent), 25)
+
+theme:
+  colors:
+    editor:
+      background: $(std.bg.primary)
+      foreground: $(std.fg.primary)
+      selectionBackground: fade($(std.bg.accent), .25)
+      lineHighlightBackground: fade($(std.bg.accent), .5)
+
+    activityBar:
+      background: $(std.bg.primary)
+      foreground: $(std.fg.accent)
+    sideBar:
+      background: $(std.bg.primary)
+      foreground: $(std.fg.primary)
+
+    statusBar:
+      background: $(std.bg.accent)
+      foreground: $(std.fg.primary)
+
+  tokenColors:
+    - name: Regular Text
+      settings:
+        foreground: $(std.fg.primary)
+
+  semanticTokenColors:

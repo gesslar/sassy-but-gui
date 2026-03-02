@@ -12,10 +12,7 @@ const WhatWeCameHereFor = "./Sassy.js"
  * @returns {Promise<any>} The imported ESM module.
  */
 async function ensureESM() {
-  if(!esm)
-    esm = await import(WhatWeCameHereFor)
-
-  return esm
+  return await import(WhatWeCameHereFor)
 }
 
 /**
@@ -25,9 +22,10 @@ async function ensureESM() {
  * @returns {Promise<void>}
  */
 async function activate(context) {
-  const mode = await ensureESM()
+  const loaded = await ensureESM()
+  esm = new loaded.default()
 
-  await mode?.activate(context)
+  await esm.activate(context)
 }
 
 /**
@@ -36,10 +34,10 @@ async function activate(context) {
  * @returns {Promise<void>}
  */
 async function deactivate() {
-  const mode = await ensureESM()
+  if(!esm)
+    return
 
-  if(mode.deactivate)
-    return mode.deactivate()
+  esm.deactivate()
 }
 
 // VS Code expects CommonJS exports
