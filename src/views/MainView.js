@@ -74,13 +74,21 @@ export default class MainView {
         this.#context.subscriptions
       )
 
+      context.subscriptions.push(this.#webviewView)
     } catch(error) {
       this.#glog.error(error)
     }
   }
 
   async #processMessage(message) {
+    this.#glog.info(`Got ${message.type}`)
+
     switch(message.type) {
+      case "refresh": {
+        this.#webviewView.webview.html = await this.#getWebviewContent()
+        break
+      }
+
       default:
         break
     }

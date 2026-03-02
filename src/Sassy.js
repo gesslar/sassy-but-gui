@@ -58,6 +58,8 @@ class Sassy {
       eventProvider: this.#eventProvider
     })
 
+    context.subscriptions.push(this.#mainView)
+
     await this.#mainView.showWebview(payload)
   }
 }
