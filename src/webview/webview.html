@@ -12,16 +12,16 @@
                    script-src {{CSP_SOURCE}} 'unsafe-inline';
                    font-src {{CSP_SOURCE}} 'unsafe-inline';
                    connect-src https:;">
-  <title>Sassy Webview</title>
+  <title>mamase mamasa mamakusa</title>
   <base href="{{BASE_URI}}/">
-  <link rel="stylesheet" href="css/webview.css" />
-  <link rel="stylesheet" href="{{CODICON_CSS}}" />
-  <script src="js/webview.js" type="module" defer></script>
-  <script src="js/ToolButton.js" type="module" defer></script>
+  <link rel="stylesheet" crossorigin href="css/webview.css" />
+  <link rel="stylesheet" crossorigin href="{{CODICON_CSS}}" />
+  <script src="js/webview.js" crossorigin type="module" defer></script>
+  <script src="js/components.js" crossorigin type="module" defer></script>
 </head>
 
 <body>
-  <sassy-toolbutton id="refresh-button" icon="refresh"></sassy-toolbutton>
+  <main></main>
 </body>
 
 </html>
