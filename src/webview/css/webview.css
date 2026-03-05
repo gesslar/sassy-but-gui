@@ -1,3 +1,5 @@
+:root {}
+
 body {
   background-color: var(--vscode-editor-background);
   color: var(--vscode-editor-foreground);
@@ -28,6 +30,72 @@ body {
     &.toolbutton {
       margin: 0.2rem 0.2rem;
       padding: 0.2rem;
+    }
+  }
+
+  main {
+    .validation-panel {
+      .validation-panel-header {
+        font-family: var(--vscode-font-family);
+        font-size: var(--vscode-font-size);
+        font-weight: bold;
+        text-transform: uppercase;
+        /* Standard for sidebar section headers */
+        color: var(--vscode-sideBarSectionHeader-foreground);
+        background-color: var(--vscode-sideBarSectionHeader-background);
+      }
+
+      .validation-panel-body {
+        .validation-lint-item {
+          width: 100%;
+          display: flex;
+          flex-direction: row;
+          justify-content: space-between;
+
+          >:last-child {
+            margin-left: auto;
+          }
+
+          .validation-severity {
+            .severity-low {
+              color: var(--vscode-problemsInfoIcon-foreground);
+            }
+
+            .severity-medium {
+              color: var(--vscode-problemsWarningIcon-foreground);
+            }
+
+            .severity-high {
+              color: var(--vscode-problemsErrorIcon-foreground);
+            }
+          }
+
+          .validation-variable,
+          .validation-property {
+            color: red;
+          }
+
+          .validation-value {
+            color: purple;
+          }
+
+          .validation-occurrences {
+            color: green;
+          }
+
+          .validation-detail {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            color: gold;
+          }
+
+          .validation-type {
+            min-width: max-content;
+            color: blue;
+          }
+        }
+      }
     }
   }
 }

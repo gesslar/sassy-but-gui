@@ -33,11 +33,12 @@
     "major": "npm version major"
   },
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.94.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "^4.5.1",
+    "@gesslar/sassy": "^5.2.2",
     "@gesslar/toolkit": "file:../toolkit",
+    "@gesslar/vscode-theme-schema": "file:../vscode-theme-schema",
     "@vscode/codicons": "^0.0.44",
     "@vscode/vsce": "^3.7.1"
   },
@@ -46,6 +47,24 @@
     "eslint": "^10.0.2"
   },
   "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "myCustomPanelContainer",
+          "title": "My Custom Panel",
+          "icon": "resources/double-s.svg"
+        }
+      ]
+    },
+    "views": {
+      "myCustomPanelContainer": [
+        {
+          "id": "myTreeView",
+          "name": "My Tree View Name",
+          "icon": "resources/double-s.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "sassy.open",
