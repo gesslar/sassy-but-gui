@@ -23,7 +23,7 @@ export default class FileService {
         canSelectFolders: false,
         canSelectMany: false,
         filters: {
-          "Sassy source file": ["yaml", "json5"]
+          "Sassy theme file": ["sassy.yaml"]
         },
         defaultUri: workspace.workspaceFolders?.[0]?.uri
       })

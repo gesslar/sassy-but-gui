@@ -1,6 +1,0 @@
-import "./components/SeverityIcon.js"
-import "./components/Validation-Colors.js"
-import "./components/Validation-Panel.js"
-import "./components/Validation-SemanticTokenColors.js"
-import "./components/Validation-TokenColors.js"
-import "./components/Validation-Variables.js"
