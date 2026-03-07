@@ -5,6 +5,9 @@
   "version": "1.0.0",
   "description": "Sassy but GUI",
   "main": "./src/ritual-sacrifice-to-cjs.cjs",
+  "activationEvents": [
+    "onLanguage:yaml"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gesslar/sassy-but-gui.git"
@@ -36,52 +39,29 @@
     "vscode": "^1.94.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "^5.2.2",
-    "@gesslar/toolkit": "file:../toolkit",
-    "@gesslar/vscode-theme-schema": "file:../vscode-theme-schema",
+    "@gesslar/sassy": "^5.8.0",
+    "@gesslar/toolkit": "^4.0.0",
+    "@gesslar/vscode-theme-schema": "^1.0.0",
     "@vscode/codicons": "^0.0.44",
     "@vscode/vsce": "^3.7.1"
   },
   "devDependencies": {
     "@gesslar/uglier": "^2.0.0",
-    "eslint": "^10.0.2"
+    "eslint": "^10.0.3"
   },
   "contributes": {
-    "viewsContainers": {
-      "panel": [
-        {
-          "id": "myCustomPanelContainer",
-          "title": "My Custom Panel",
-          "icon": "resources/double-s.svg"
-        }
-      ]
-    },
-    "views": {
-      "myCustomPanelContainer": [
-        {
-          "id": "myTreeView",
-          "name": "My Tree View Name",
-          "icon": "resources/double-s.svg"
-        }
-      ]
+    "configurationDefaults": {
+      "files.associations": {
+        "*.sassy.yaml": "yaml"
+      }
     },
     "commands": [
       {
-        "command": "sassy.open",
-        "title": "Open Sassy file",
-        "icon": {
-          "dark": "resources/double-s-white.svg",
-          "light": "resources/double-s.svg"
-        }
+        "command": "sassy.build",
+        "title": "Force Rebuild",
+        "icon": "$(symbol-property)"
       }
     ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "sassy.open",
-          "group": "2_open@1"
-        }
-      ]
-    }
+    "menus": {}
   }
 }
