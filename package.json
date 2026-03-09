@@ -6,6 +6,7 @@
   "description": "Sassy but GUI",
   "main": "./src/ritual-sacrifice-to-cjs.cjs",
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:yaml"
   ],
   "repository": {
@@ -28,7 +29,7 @@
     "update": "npx npm-check-updates -u && npm install",
     "pr": "gt submit -p --ai",
     "lint": "eslint src/",
-    "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix/",
+    "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix",
     "publish:vsce": "npm run package && xdg-open https://marketplace.visualstudio.com/manage/publishers/gesslar",
     "publish:ovsx": "npm run package && xdg-open https://open-vsx.org/user-settings/extensions",
     "patch": "npm version patch",
@@ -40,7 +41,7 @@
   },
   "dependencies": {
     "@gesslar/sassy": "^5.8.0",
-    "@gesslar/toolkit": "^4.0.0",
+    "@gesslar/toolkit": "file:../toolkit",
     "@gesslar/vscode-theme-schema": "^1.0.0",
     "@vscode/codicons": "^0.0.44",
     "@vscode/vsce": "^3.7.1"

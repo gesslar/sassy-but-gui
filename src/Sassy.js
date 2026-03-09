@@ -1,6 +1,6 @@
 import {Cache, FileObject, FileSystem as FS, Glog, Promised} from "@gesslar/toolkit"
 import * as vscode from "vscode"
-import {Lint, Proof, Theme} from "@gesslar/sassy"
+import {Lint, Theme} from "@gesslar/sassy"
 import {Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 
 import DataService from "./DataService.js"
@@ -21,13 +21,6 @@ const {Diagnostic, DiagnosticSeverity, Position, TextEditorRevealType} = vscode
  * @import {FileSystemWatcher} from vscode
  */
 
-/**
- * @typedef {object} ThemeMap
- * @property {Theme} theme - Theme object
- * @property {Array<Uri>} dependencies - All dependencies, excluding theme definition file
- * @property {Uri} output - The output file
- */
-
 class Sassy {
   /** An instance of Glog. @type {Glog} */
   #glog
@@ -45,8 +38,9 @@ class Sassy {
   #diagnostics
   /** Tracks which diagnostic URIs belong to each theme. @type {Map<string, Uri[]>} */
   #diagnosticUris = new Map()
-  /** Themes map tracks all theme definitions, deps, and outputs @type {Map<Uri, ThemeMap} */
+  /** Themes map tracks all theme definitions, deps, and outputs @type {Map<string, Theme}>} */
   #themeMap = new Map()
+
   /** Theme file and depedency cache. @type {Cache} */
   #cache = new Cache()
 
@@ -61,16 +55,10 @@ class Sassy {
       vscode,
     })
 
-    this.#eventProvider = new EventService({
-      glog: this.#glog
-    })
-    new FileService({
-      glog: this.#glog,
-      eventProvider: this.#eventProvider
-    })
-    this.#dataService = new DataService({
-      glog: this.#glog
-    })
+    this.#eventProvider = new EventService({glog: this.#glog})
+    new FileService({glog: this.#glog, eventProvider: this.#eventProvider})
+    this.#dataService = new DataService({glog: this.#glog})
+
     this.#diagnostics = languages.createDiagnosticCollection("sassy")
 
     context.subscriptions.push(
@@ -90,77 +78,88 @@ class Sassy {
       ),
     )
 
-    this.#eventProvider.on("file.loaded", payload => this.#fileLoaded(payload))
-
     this.#dataProvider = new SassyDataProvider()
+
+    this.#eventProvider.on("file.loaded", payload => this.#fileLoaded(payload))
+    this.#eventProvider.on("theme.resolved", payload => this.#build(payload))
+    this.#eventProvider.on("theme.built", payload => this.#lint(payload))
+
+    // we don't need to await, let this finish on its own time
+    this.#buildThemeMap()
   }
 
-  async #gotoProperty(filePath, property) {
+  /**
+   * Build a theme from its Uri. Looks up the value from {@link Sassy.#themeMap},
+   * and if present, performs a build. If the theme does not exist, this is a
+   * no-op.
+   *
+   * Emits `theme.built` asynchronously with the theme's Uri upon completion.
+   *
+   * @async
+   * @param {Uri} uri - The theme's Uri.
+   * @returns {Promise<undefined>} What it says on the tin.
+   */
+  async #build(uri) {
+    debugger
+
     try {
-      const uri = Uri.file(filePath)
-      const doc = await workspace.openTextDocument(uri)
-      const text = doc.getText()
+      const fileName = uri.fsPath
+      const theme = this.#themeMap.get(fileName)
 
-      const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      const pattern = new RegExp(`"${escaped}"\\s*:`)
-      const match = pattern.exec(text)
-
-      if(!match)
+      if(!theme)
         return
 
-      const uriStr = uri.toString()
-      const existingTab = window.tabGroups.all
-        .flatMap(g => g.tabs.map(tab => ({tab, group: g})))
-        .find(({tab}) =>
-          tab.input instanceof TabInputText
-          && tab.input.uri.toString() === uriStr
-        )
+      await theme.build()
 
-      const viewColumn = existingTab?.group.viewColumn ?? ViewColumn.One
+      this.#eventProvider.asyncEmit("theme.built", uri)
 
-      const pos = doc.positionAt(match.index + 1)
-      const editor = await window
-        .showTextDocument(doc, {viewColumn, preview: false})
-
-      editor.revealRange(
-        new Range(pos, pos),
-        TextEditorRevealType.InCenterIfOutsideViewport
-      )
-
-      editor.selection = new Selection(
-        pos, pos.translate(0, property.length)
-      )
     } catch(error) {
-      this.#glog.error(
-        `Failed to navigate to ${property}: ${error.message}`
-      )
+      this.#glog.error(error)
     }
   }
 
-  async #loadBuildAndValidate(node, {lint = false, silent = false} = {}) {
-    const {file: themeFile} = node
-    const filePath = themeFile.path
-    const themeData = await themeFile.loadData()
-    const configOutputPath = themeData?.config?.output
-    const themeDir = FS.pathParts(themeFile.path).dir
+  /**
+   * Lints a theme from its Uri. Looks up the value from
+   * {@link Sassy.#themeMap}, and if present, performs a lint operation. If
+   * the theme does not exist, or is not ready, this is a no-op.
+   *
+   * Although this method is called #lint, it is also resolution validation.
+   * There's no reason this cannot fall under the same umbrella-ella-ella, eh,
+   * eh, eh-eh. Normies don't know the difference. We'll just use a read-only
+   * document probably later if there's a click-to-jump-to-bad-choices need.
+   *
+   * @param {Uri} uri - The theme's Uri.
+   * @returns {Promise<undefined>} What it says on the tin.
+   */
+  async #lint(uri) {
+    try {
+      debugger
 
-    const outputDir = configOutputPath
-      ? FS.resolvePath(themeDir, configOutputPath)
-      : undefined
+      const fileName = uri.fsPath
+      const theme = this.#themeMap.get(fileName)
 
-    const theme = await new Theme()
-      .setThemeFile(themeFile)
-      .withOptions({outputDir})
-      .load()
+      if(!theme)
+        return
 
-    await theme.build()
+      if(!theme.isReady)
+        return
 
-    if(outputDir) {
-      await theme.write()
-    } else {
-      this.#glog.warn(`Missing 'config.output' in '${themeFile.name}', skipping write.`)
+      const linter = new Lint()
+      const linted = await linter.run(theme)
+      const colors = theme.getOutput().colors
+      const validated = await Validator.validate(vscodeSchema, colors)
+      const invalid = validated.filter(e => e.status !== "valid")
+      linted.colors.push(...invalid)
+
+      this.#eventProvider.asyncEmit("theme.linted", linted)
+
+      debugger
+    } catch(error) {
+      this.#glog.error(error)
     }
+  }
 
+  /*
     if(lint) {
       const lintResult = await new Lint().run(theme)
 
@@ -183,9 +182,9 @@ class Sassy {
 
     if(!silent)
       this.#glog.info(`Compiled ${themeFile.name}`)
-
-    return theme
-  }
+*/
+  // return theme
+  // }
 
   #stopWatching(filePath) {
     const watchers = this.#watchers.get(filePath)
@@ -210,9 +209,7 @@ class Sassy {
       try {
         const raw = await workspace.fs.readFile(outputUri)
         const data = JSON.parse(Buffer.from(raw).toString("utf-8"))
-        const validation = await Validator.validate(
-          vscodeSchema, data?.colors
-        )
+        const validation = await Validator.validate(vscodeSchema, data?.colors)
 
         this.#dataProvider.setValidation(filePath, validation, outputPath)
       } catch(error) {
@@ -442,7 +439,7 @@ class Sassy {
       const file = new FileObject(document.fileName)
       const content = await file.loadData()
 
-      this.#eventProvider.emit("file.loaded", {file, content})
+      this.#eventProvider.asyncEmit("file.loaded", {file, content})
     } catch(error) {
       this.#glog.error(error)
     }
@@ -456,7 +453,7 @@ class Sassy {
       const file = new FileObject(document.fileName)
       const content = await file.loadData()
 
-      this.#eventProvider.emit("file.loaded", {file, content})
+      this.#eventProvider.asyncEmit("file.closed", {file, content})
     } catch(error) {
       this.#glog.error(error)
     }
@@ -486,28 +483,76 @@ class Sassy {
         defs.map(async uri => {
           const file = new FileObject(uri.fsPath)
           const theme = new Theme().setCache(this.#cache).setThemeFile(file)
-          const proof = await new Proof().run(theme, true)
-          const dependencies = proof.config.import.map(e => {
-            const resolved = FS.resolvePath(file.parentPath, e)
+          debugger
+          await theme.load()
 
-            return Uri.file(resolved)
-          })
+          const configOutputPath = theme.getSource().config?.output
+          const outputPath = FS.resolvePath(
+            new FileObject(uri.fsPath).parentPath,
+            configOutputPath
+          )
 
-          return {uri, theme, dependencies}
+          theme.withOptions({outputDir: outputPath})
+
+          return {uri, theme}
         })
       )
+
+      for(const rejected of Promised.rejected(settled))
+        this.#glog.error(rejected.reason)
 
       this.#themeMap.clear()
 
       for(const element of Promised.values(settled)) {
-        this.#themeMap.set(element.uri, {
-          theme: element.theme,
-          dependencies: element.dependencies
-        })
+        this.#themeMap.set(element.uri.fsPath, element.theme)
+
+        this.#eventProvider.asyncEmit("theme.resolved", element.uri)
       }
 
     } catch(error) {
       this.#glog.error(error)
+    }
+  }
+
+  async #gotoProperty(filePath, property) {
+    try {
+      const uri = Uri.file(filePath)
+      const doc = await workspace.openTextDocument(uri)
+      const text = doc.getText()
+
+      const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      const pattern = new RegExp(`"${escaped}"\\s*:`)
+      const match = pattern.exec(text)
+
+      if(!match)
+        return
+
+      const uriStr = uri.toString()
+      const existingTab = window.tabGroups.all
+        .flatMap(g => g.tabs.map(tab => ({tab, group: g})))
+        .find(({tab}) =>
+          tab.input instanceof TabInputText
+          && tab.input.uri.toString() === uriStr
+        )
+
+      const viewColumn = existingTab?.group.viewColumn ?? ViewColumn.One
+
+      const pos = doc.positionAt(match.index + 1)
+      const editor = await window
+        .showTextDocument(doc, {viewColumn, preview: false})
+
+      editor.revealRange(
+        new Range(pos, pos),
+        TextEditorRevealType.InCenterIfOutsideViewport
+      )
+
+      editor.selection = new Selection(
+        pos, pos.translate(0, property.length)
+      )
+    } catch(error) {
+      this.#glog.error(
+        `Failed to navigate to ${property}: ${error.message}`
+      )
     }
   }
 }
