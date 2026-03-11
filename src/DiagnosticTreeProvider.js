@@ -6,11 +6,21 @@ const SEVERITY_ICONS = {
   low: new vscode.ThemeIcon("info", new vscode.ThemeColor("problemsInfoIcon.foreground")),
 }
 
-class FileNode {
-  constructor(file, lint, validation, outputFile) {
-    this.file = file
-    this.lint = lint
+class ThemeNode {
+  constructor(file, fileMap, validation, outputFile) {
+    this.file = file           // the root .sassy.yaml Uri/file object
+    this.fileMap = fileMap     // Map<filePath, {variables, tokenColors, semanticTokenColors}>
     this.validation = validation
+    this.outputFile = outputFile
+  }
+}
+
+class FileNode {
+  constructor(filePath, lint, parent, outputFile) {
+    this.filePath = filePath
+    this.file = {name: filePath.split("/").pop(), path: filePath}
+    this.lint = lint           // {variables, tokenColors, semanticTokenColors}
+    this.parent = parent       // ThemeNode
     this.outputFile = outputFile
   }
 }
@@ -33,47 +43,55 @@ class IssueNode {
   }
 }
 
-class PlaceholderNode {}
+function groupLintByFile(lint) {
+  const fileMap = new Map()
 
-export class SassyDataProvider {
-  #files = new Map()
-  #fileNodes = []
+  const ensure = filePath => {
+    if(!fileMap.has(filePath))
+      fileMap.set(filePath, {
+        variables: [], tokenColors: [], semanticTokenColors: []
+      })
+
+    return fileMap.get(filePath)
+  }
+
+  const fileOf = issue => issue.location?.split(":")[0]
+
+  for(const issue of lint.variables ?? []) {
+    const f = fileOf(issue)
+    if(f)
+      ensure(f).variables.push(issue)
+  }
+
+  for(const issue of lint.tokenColors ?? []) {
+    const f = fileOf(issue)
+    if(f)
+      ensure(f).tokenColors.push(issue)
+  }
+
+  for(const issue of lint.semanticTokenColors ?? []) {
+    const f = fileOf(issue)
+    if(f)
+      ensure(f).semanticTokenColors.push(issue)
+  }
+
+  return fileMap
+}
+
+export class DiagnosticTreeProvider {
+  #themes = new Map() // themePath → {file, fileMap, validation, outputFile}
   #onDidChangeTreeData = new vscode.EventEmitter()
   onDidChangeTreeData = this.#onDidChangeTreeData.event
 
-  // Drag and drop support
-  dropMimeTypes = ["text/uri-list"]
-  dragMimeTypes = []
-
-  /** @type {((uri: vscode.Uri) => void)|null} */
-  onFileDrop = null
-
-  handleDrag() {}
-
-  async handleDrop(_target, dataTransfer) {
-    const uriList = dataTransfer.get("text/uri-list")
-
-    if(!uriList)
-      return
-
-    const value = await uriList.asString()
-    const uris = value.split("\r\n")
-      .filter(line => line && !line.startsWith("#"))
-      .map(line => vscode.Uri.parse(line))
-      .filter(uri => /\.sassy\.(yaml|json5?)$/.test(uri.fsPath))
-
-    for(const uri of uris) {
-      this.onFileDrop?.(uri)
-    }
-  }
-
   addFile(file, lint) {
-    this.#files.set(file.path, {file, lint})
+    const fileMap = groupLintByFile(lint)
+
+    this.#themes.set(file.path, {file, fileMap, lint})
     this.#onDidChangeTreeData.fire()
   }
 
-  setValidation(filePath, validation, outputFile) {
-    const entry = this.#files.get(filePath)
+  setValidation(themePath, validation, outputFile) {
+    const entry = this.#themes.get(themePath)
 
     if(!entry)
       return
@@ -83,8 +101,8 @@ export class SassyDataProvider {
     this.#onDidChangeTreeData.fire()
   }
 
-  clearValidation(filePath) {
-    const entry = this.#files.get(filePath)
+  clearValidation(themePath) {
+    const entry = this.#themes.get(themePath)
 
     if(!entry)
       return
@@ -95,27 +113,25 @@ export class SassyDataProvider {
   }
 
   removeFile(path) {
-    this.#files.delete(path)
+    this.#themes.delete(path)
     this.#onDidChangeTreeData.fire()
   }
 
   clearAll() {
-    this.#files.clear()
+    this.#themes.clear()
     this.#onDidChangeTreeData.fire()
   }
 
-  getFileNodes() {
-    return this.#fileNodes
-  }
-
   getTreeItem(element) {
-    if(element instanceof PlaceholderNode) {
+    if(element instanceof ThemeNode) {
       const item = new vscode.TreeItem(
-        "No theme loaded",
-        vscode.TreeItemCollapsibleState.None
+        element.file.name,
+        vscode.TreeItemCollapsibleState.Expanded
       )
 
-      item.description = "Open or drag a .sassy.yaml file"
+      item.iconPath = new vscode.ThemeIcon("color-mode")
+      item.contextValue = "sassyTheme"
+      item.id = element.file.path
 
       return item
     }
@@ -128,7 +144,10 @@ export class SassyDataProvider {
 
       item.iconPath = new vscode.ThemeIcon("file")
       item.contextValue = "sassyFile"
-      item.id = element.file.path
+      item.id = element.filePath
+      item.description = element.filePath
+        .replace(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "", "")
+        .replace(/^\//, "")
 
       return item
     }
@@ -166,8 +185,8 @@ export class SassyDataProvider {
           arguments: [element.location],
         }
       } else {
-        const fileNode = element.parent?.parent
-        const outputFile = fileNode?.outputFile
+        const themeNode = element.parent?.parent?.parent
+        const outputFile = themeNode?.outputFile
 
         if(outputFile) {
           item.command = {
@@ -185,6 +204,9 @@ export class SassyDataProvider {
   }
 
   getParent(element) {
+    if(element instanceof FileNode)
+      return element.parent
+
     if(element instanceof CategoryNode)
       return element.parent
 
@@ -196,27 +218,32 @@ export class SassyDataProvider {
 
   getChildren(element) {
     if(!element) {
-      if(this.#files.size === 0)
-        return [new PlaceholderNode()]
-
-      this.#fileNodes = [...this.#files.values()].map(
-        ({file, lint, validation, outputFile}) =>
-          new FileNode(file, lint, validation, outputFile)
+      return [...this.#themes.values()].map(
+        ({file, fileMap, validation, outputFile}) =>
+          new ThemeNode(file, fileMap, validation, outputFile)
       )
+    }
 
-      return this.#fileNodes
+    if(element instanceof ThemeNode) {
+      return [...element.fileMap.entries()].map(
+        ([filePath, lint]) => new FileNode(
+          filePath, lint, element, element.outputFile
+        )
+      )
     }
 
     if(element instanceof FileNode) {
-      const {lint, validation} = element
+      const {lint} = element
       const categories = [
         new CategoryNode("Variables", lint.variables ?? [], element),
         new CategoryNode("Token Colors", lint.tokenColors ?? [], element),
         new CategoryNode("Semantic Token Colors", lint.semanticTokenColors ?? [], element),
       ]
 
-      if(validation) {
-        const invalidColors = validation.filter(v => v.status !== "valid")
+      // Validation lives on the ThemeNode, only show on the root theme file
+      const themeNode = element.parent
+      if(themeNode?.validation && element.filePath === themeNode.file.path) {
+        const invalidColors = themeNode.validation.filter(v => v.status !== "valid")
 
         categories.push(new CategoryNode("Colors", invalidColors, element))
       }
@@ -234,7 +261,6 @@ export class SassyDataProvider {
   }
 
   #issueToNodes(issue, parent) {
-    // Lint: variables
     if(issue.variable) {
       return [new IssueNode(
         `${issue.type}: ${issue.variable}`,
@@ -245,7 +271,6 @@ export class SassyDataProvider {
       )]
     }
 
-    // Lint: tokenColors (expand occurrences)
     if(issue.scope) {
       if(Array.isArray(issue.occurrences) && issue.occurrences.length > 0) {
         return issue.occurrences.map(o => new IssueNode(
@@ -266,7 +291,6 @@ export class SassyDataProvider {
       )]
     }
 
-    // Lint: semanticTokenColors
     if(issue.tokenType) {
       return [new IssueNode(
         `${issue.type}: ${issue.tokenType}`,
@@ -277,7 +301,6 @@ export class SassyDataProvider {
       )]
     }
 
-    // Validation colors
     if(issue.property) {
       return [new IssueNode(
         issue.property,
@@ -287,7 +310,6 @@ export class SassyDataProvider {
       )]
     }
 
-    // Fallback
     return [new IssueNode(
       issue.type || issue.message || "unknown issue",
       issue.severity ?? "low",

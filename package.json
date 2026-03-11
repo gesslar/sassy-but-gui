@@ -40,14 +40,14 @@
     "vscode": "^1.94.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "^5.8.0",
+    "@gesslar/sassy": "file:../sassy",
     "@gesslar/toolkit": "file:../toolkit",
     "@gesslar/vscode-theme-schema": "^1.0.0",
     "@vscode/codicons": "^0.0.44",
     "@vscode/vsce": "^3.7.1"
   },
   "devDependencies": {
-    "@gesslar/uglier": "^2.0.0",
+    "@gesslar/uglier": "^2.1.0",
     "eslint": "^10.0.3"
   },
   "contributes": {
@@ -61,8 +61,48 @@
         "command": "sassy.build",
         "title": "Force Rebuild",
         "icon": "$(symbol-property)"
+      },
+      {
+        "command": "sassy.buildTheme",
+        "title": "Build Theme",
+        "icon": "$(export)"
+      },
+      {
+        "command": "sassy.enableAutoBuild",
+        "title": "Enable Auto-Build",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "sassy.disableAutoBuild",
+        "title": "Disable Auto-Build",
+        "icon": "$(sync-ignored)"
       }
     ],
-    "menus": {}
+    "menus": {
+      "editor/title": [
+        {
+          "command": "sassy.buildTheme",
+          "when": "resourceFilename =~ /\\.sassy\\.yaml$/",
+          "group": "navigation"
+        },
+        {
+          "command": "sassy.enableAutoBuild",
+          "when": "resourceFilename =~ /\\.sassy\\.yaml$/ && !sassy.autoBuildActive",
+          "group": "navigation"
+        },
+        {
+          "command": "sassy.disableAutoBuild",
+          "when": "resourceFilename =~ /\\.sassy\\.yaml$/ && sassy.autoBuildActive",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sassy.buildTheme",
+          "when": "resourceFilename =~ /\\.sassy\\.yaml$/",
+          "group": "sassy"
+        }
+      ]
+    }
   }
 }
