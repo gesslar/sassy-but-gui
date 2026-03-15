@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none';
+                 style-src {{CSP_SOURCE}} 'unsafe-inline';
+                 script-src {{CSP_SOURCE}} 'unsafe-inline';
+                 font-src {{CSP_SOURCE}} 'unsafe-inline';
+                 connect-src https:;">
+  <title>Sassy</title>
+  <base href="{{BASE_URI}}/">
+  <link rel="stylesheet" href="webview.css" />
+  <link rel="stylesheet" href="{{CODICON_CSS}}" id="vscode-codicon-stylesheet" />
+  <script src="{{ELEMENTS_JS}}" type="module" defer></script>
+  <script src="webview.js" type="module" defer></script>
+</head>
+
+<body>
+  <main id="tab-bar">
+    <div id="theme-info" hidden>
+      <vscode-label shadow>
+        <h2 id="theme-name"></h2>
+        <p id="theme-path" class="description">—</p>
+      </vscode-label>
+    </div>
+
+    <vscode-tabs id="main-tabs" panel selected-index="0">
+
+      <!-- Dashboard -->
+      <vscode-tab-header slot="header" id="tab-dashboard" aria-controls="view-dashboard">
+        <i class="codicon codicon-dashboard" slot="icon"></i>
+        Dashboard
+      </vscode-tab-header>
+
+      <vscode-tab-panel>
+        <div id="view-dashboard" class="tab-panel panel-content">
+
+          <vscode-toolbar-container>
+            <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">Build
+              theme</vscode-toolbar-button>
+            <vscode-toolbar-button id="btn-lint" icon="debug" label="Lint theme">Lint theme</vscode-toolbar-button>
+            <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
+          </vscode-toolbar-container>
+
+          <div id="no-theme" class="empty-state">
+            <i class="codicon codicon-color-mode hero-icon"></i>
+            <p>Open a <span class="tt">.sassy.yaml</span> file to get started.</p>
+          </div>
+
+          <div class="action-row">
+          </div>
+
+          <div id="build-status" class="status-card" hidden>
+            <i class="codicon codicon-check status-icon"></i>
+            <span id="build-status-text">Ready</span>
+          </div>
+        </div>
+
+        </div>
+      </vscode-tab-panel>
+
+      <!-- Diagnostics -->
+      <vscode-tab-header slot="header" id="tab-diagnostics" aria-controls="view-diagnostics">
+        Diagnostics
+      </vscode-tab-header>
+
+      <vscode-tab-panel>
+        <div id="view-diagnostics" class="tab-panel panel-content">
+          <div class="filter-bar">
+            <vscode-toolbar-container>
+              <vscode-textfield id="diag-filter" label="Filter" type="text" placeholder="Filter by message or location">
+                <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
+              </vscode-textfield>
+
+              <vscode-checkbox-group id="severity-filters">
+                <vscode-checkbox checked="true" toggle id="filter-errors" label="Errors"></vscode-checkbox>
+                <vscode-checkbox checked="true" toggle id="filter-warnings" label="Warnings"></vscode-checkbox>
+                <vscode-checkbox checked="true" toggle id="filter-info" label="Info"></vscode-checkbox>
+              </vscode-checkbox-group>
+            </vscode-toolbar-container>
+          </div>
+
+          <div id="diag-empty" class="empty-state">
+            <i class="codicon codicon-pass hero-icon success"></i>
+            <p>No diagnostics to show.</p>
+          </div>
+
+          <div id="diag-list"></div>
+
+        </div>
+      </vscode-tab-panel>
+
+      <!-- Resolve -->
+      <vscode-tab-header id="tab-resolve" aria-controls="view-resolve">
+        Resolve
+      </vscode-tab-header>
+
+      <vscode-tab-panel>
+        <div id="view-resolve" class="tab-panel panel-content">
+
+          <div class="resolve-form" hidden>
+            <vscode-toolbar-container>
+              <vscode-single-select id="resolve-type">
+                <vscode-option value="color" selected>Color</vscode-option>
+                <vscode-option value="tokenColor">Token Color</vscode-option>
+                <vscode-option value="semanticTokenColor">Semantic Token Color</vscode-option>
+              </vscode-single-select>
+
+              <vscode-textfield id="resolve-key" label="Key" placeholder="e.g. editor.background" type="text">
+                <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
+              </vscode-textfield>
+
+              <vscode-toolbar-button id="btn-resolve" icon="list-tree">Resolve</vscode-toolbar-button>
+
+            </vscode-toolbar-container>
+          </div>
+
+          <div id="resolve-result" hidden>
+            <h3 id="resolve-result-title">Resolution</h3>
+            <div id="resolve-final" class="resolve-final"></div>
+            <div id="resolve-trail"></div>
+          </div>
+
+        </div>
+      </vscode-tab-panel>
+
+      <!-- Proof -->
+      <vscode-tab-header slot="header" id="tab-proof" aria-controls="view-proof">
+        <i class="codicon codicon-file-code" slot="icon"></i>
+        Proof
+      </vscode-tab-header>
+
+      <vscode-tab-panel>
+        <div id="view-proof" class="tab-panel panel-content">
+
+          <div id="proof-empty" class="empty-state">
+            <p>Load a theme to see its composed theme before evaluation.</p>
+          </div>
+
+          <div id="proof-scroll" hidden>
+            <pre id="proof-content" class="proof-block"></pre>
+          </div>
+
+        </div>
+      </vscode-tab-panel>
+
+      <!-- Palette -->
+      <vscode-tab-header slot="header" id="tab-palette" aria-controls="view-palette">
+        Palette
+      </vscode-tab-header>
+
+      <vscode-tab-panel>
+        <div id="view-palette" class="tab-panel panel-content">
+
+          <div id="palette-empty" class="empty-state">
+            <p>No palette data available.</p>
+          </div>
+
+          <div id="palette-grid" class="palette-grid" hidden></div>
+
+        </div>
+      </vscode-tab-panel>
+
+    </vscode-tabs>
+
+  </main>
+
+  <!-- Templates -->
+  <template id="diag-item-template">
+    <div class="diag-item" tabindex="0">
+      <div class="diag-header">
+        <i class="codicon diag-icon"></i>
+        <span class="diag-message"></span>
+        <span class="diag-category badge"></span>
+      </div>
+      <div class="diag-location"></div>
+    </div>
+  </template>
+
+  <template id="palette-swatch-template">
+    <div class="palette-swatch">
+      <div class="swatch-color"></div>
+      <div class="swatch-info">
+        <span class="swatch-name"></span>
+        <span class="swatch-value"></span>
+      </div>
+    </div>
+  </template>
+
+  <template id="resolve-step-template">
+    <div class="resolve-step">
+      <span class="step-type"></span>
+      <span class="step-value"></span>
+      <span class="step-swatch"></span>
+    </div>
+  </template>
+
+</body>
+
+</html>

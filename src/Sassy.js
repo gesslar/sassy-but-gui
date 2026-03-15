@@ -1,56 +1,42 @@
 import {Lint, Resolve, Theme} from "@gesslar/sassy"
-import {Cache, FileObject, FileSystem as FS, Glog} from "@gesslar/toolkit"
-import {Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
+import {Cache, Data, FileObject, FileSystem as FS, Glog} from "@gesslar/toolkit"
 import * as vscode from "vscode"
 
+import {Sass} from "@gesslar/toolkit/browser"
 import EventService from "./EventService.js"
-import {DiagnosticTreeProvider} from "./DiagnosticTreeProvider.js"
+import SassyPanel from "./SassyPanel.js"
+import {Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 
-const vscodeSchema = (await VSCodeSchema.new()).map
-
-// yoink!
-const {commands, languages, window, workspace} = vscode
-const {Range, TabInputText, Uri, ViewColumn} = vscode
-const {Selection, TextDocument} = vscode
-const {Diagnostic, DiagnosticSeverity, Position, TextEditorRevealType} = vscode
+const {commands, window, workspace} = vscode
+const {Range, Selection, TabInputText, Uri, ViewColumn} = vscode
+const {Position, TextEditorRevealType} = vscode
 
 class Sassy {
-  /** An instance of Glog. @type {Glog} */
+  /** @type {Glog} */
   #glog
-  /** Event controller for messaging, etc. @type {EventService} */
+  /** @type {EventService} */
   #eventProvider
-  /** @type {DiagnosticTreeProvider} */
-  #diagnosticTreeProvider
-  /** Shared file watchers. @type {Map<string, {watcher: vscode.FileSystemWatcher, themes: Set<string>}>} */
+  /** @type {SassyPanel} */
+  #panel
+  /** @type {Map<string, {watcher: vscode.FileSystemWatcher, themes: Set<string>}>} */
   #watchers = new Map()
-  /** Diagnostics collection per theme. @type {Map<string, vscode.DiagnosticCollection>} */
-  #diagnostics = new Map()
-  /** Themes map tracks all theme definitions, deps, and outputs @type {Map<string, Theme}>} */
+  /** @type {Map<string, Theme>} */
   #themeMap = new Map()
-  /** Themes with auto-build enabled. @type {Set<string>} */
+  /** @type {Set<string>} */
   #autoBuildThemes = new Set()
-
-  /** Theme file and depedency cache. @type {Cache} */
+  /** @type {Cache} */
   #cache = new Cache()
+  #schema
 
-  /** The file extension supported by this VS Code extension @type {string} */
   #sassyFileExtension = ".sassy.yaml"
-  /** The file extension supported by this VS Code extension @type {RegExp} */
   #sassyFileExtensionRegex = new RegExp(`${this.#sassyFileExtension.replaceAll(/\./g, "\\.")}$`)
 
-  /** @type {vscode.CommentController} */
-  #commentController
-  /** Active resolve threads. @type {Map<string, vscode.CommentThread>} */
-  #resolveThreads = new Map()
-
-  #subscriptions
-
   /**
-   * Activates the Sassy extension and registers commands and things.
+   * Activates the Sassy extension.
+   *
+   * @param {vscode.ExtensionContext} context - The extension context.
    */
   async activate(context) {
-    this.#subscriptions = context.subscriptions
-
     this.#glog = new Glog({
       displayName: false,
       name: "Sassy",
@@ -58,23 +44,16 @@ class Sassy {
       vscode,
     })
 
+    this.#schema = await VSCodeSchema.new()
     this.#eventProvider = new EventService({glog: this.#glog})
 
-    this.#diagnosticTreeProvider = new DiagnosticTreeProvider()
-
-    this.#commentController = vscode.comments.createCommentController(
-      "sassy.resolve", "Sassy Color Resolution"
+    this.#panel = new SassyPanel(
+      context, this.#glog, msg => this.#handleWebviewMessage(msg)
     )
 
-    this.#commentController.commentingRangeProvider = null
-
     context.subscriptions.push(
-      this.#commentController,
-      commands.registerCommand("sassy.gotoProperty",
-        (filePath, property) => this.#gotoProperty(filePath, property)
-      ),
-      commands.registerCommand("sassy.gotoLocation",
-        location => this.#gotoLocation(location)
+      commands.registerCommand("sassy.showPanel",
+        () => this.#panel.show()
       ),
       commands.registerCommand("sassy.buildTheme",
         uri => this.#buildThemeToDisk(uri)
@@ -84,21 +63,6 @@ class Sassy {
       ),
       commands.registerCommand("sassy.disableAutoBuild",
         () => this.#setAutoBuild(false)
-      ),
-      commands.registerCommand("sassy.resolveColor",
-        (themePath, colorName, uri, line) =>
-          this.#resolveColor(themePath, colorName, uri, line)
-      ),
-      commands.registerCommand("sassy.dismissResolve",
-        threadKey => this.#dismissResolve(threadKey)
-      ),
-      languages.registerCodeActionsProvider(
-        {pattern: "**/*"},
-        {
-          provideCodeActions: (doc, range, ctx) =>
-            this.#provideResolveActions(doc, range, ctx),
-        },
-        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]}
       ),
 
       workspace.onDidOpenTextDocument(
@@ -112,22 +76,26 @@ class Sassy {
       ),
     )
 
+    // Register webview panel serializer for persistence
+    window.registerWebviewPanelSerializer(SassyPanel.viewType, {
+      deserializeWebviewPanel: async panel => {
+        await this.#panel.restore(panel)
+      }
+    })
+
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#lint(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#autoBuildToDisk(ctx))
-    this.#eventProvider.on("theme.linted", ctx => this.#publishDiagnostics(ctx))
+    this.#eventProvider.on("theme.built", ctx => this.#sendThemeData(ctx))
+    this.#eventProvider.on("theme.built", ctx => this.#sendPaletteData(ctx))
+    this.#eventProvider.on("theme.built", ctx => this.#sendProof(ctx))
+    this.#eventProvider.on("theme.linted", ctx => this.#sendDiagnostics(ctx))
   }
 
   /**
-   * Build a theme from its Uri. Looks up the value from {@link Sassy.#themeMap},
-   * and if present, performs a build. If the theme does not exist, this is a
-   * no-op.
+   * Builds a theme from its Uri.
    *
-   * Emits `theme.built` asynchronously with the theme's Uri upon completion.
-   *
-   * @async
    * @param {Uri} uri - The theme's Uri.
-   * @returns {Promise<undefined>} What it says on the tin.
    */
   async #build(uri) {
     try {
@@ -142,21 +110,14 @@ class Sassy {
       this.#eventProvider.asyncEmit("theme.built", uri)
     } catch(error) {
       this.#glog.error(error)
+      // this.#panel.postMessage({type: "error", message: error.message})
     }
   }
 
   /**
-   * Lints a theme from its Uri. Looks up the value from
-   * {@link Sassy.#themeMap}, and if present, performs a lint operation. If
-   * the theme does not exist, or is not ready, this is a no-op.
-   *
-   * Although this method is called #lint, it is also resolution validation.
-   * There's no reason this cannot fall under the same umbrella-ella-ella, eh,
-   * eh, eh-eh. Normies don't know the difference. We'll just use a read-only
-   * document probably later if there's a click-to-jump-to-bad-choices need.
+   * Lints a theme from its Uri.
    *
    * @param {Uri} uri - The theme's Uri.
-   * @returns {Promise<undefined>} What it says on the tin.
    */
   async #lint(uri) {
     try {
@@ -165,22 +126,280 @@ class Sassy {
       if(!theme)
         return
 
-      if(!theme.isReady)
+      if(!theme.canBuild())
         return
 
       const lint = await new Lint().run(theme)
+      lint.colors = await Validator.validate(
+        this.#schema.map,
+        theme.getOutput()?.colors
+      )
 
       this.#eventProvider.emit("theme.linted", {uri, lint})
+    } catch(error) {
+      this.#glog.error(error, error.stack)
+    }
+  }
+
+  /**
+   * Sends theme data to the webview after a build.
+   *
+   * @param {Uri} uri - The theme's Uri.
+   */
+  async #sendThemeData(uri) {
+    try {
+    /** @type {Theme} */
+      const theme = this.#themeMap.get(uri.fsPath)
+
+      if(!theme)
+        return
+
+      if(!theme.isCompiled())
+        throw Sassy.new("Theme has not been built yet.")
+
+      this.#panel.postMessage({
+        type: "themeData",
+        data: {
+          name: theme.getName(),
+          path: uri.fsPath,
+          proof: theme.getProof(),
+          autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
+        }
+      })
+    } catch(error) {
+      this.#glog.error(error, error.stack)
+    }
+  }
+
+  /**
+   * Sends lint diagnostics to the webview.
+   *
+   * @param {object} ctx - The context with uri and lint results.
+   */
+  #sendDiagnostics({uri, lint}) {
+    try {
+      const theme = this.#themeMap.get(uri.fsPath)
+
+      if(!theme)
+        return
+
+      this.#panel.postMessage({
+        type: "diagnostics",
+        data: {
+          themeName: theme.getName(),
+          variables: lint.variables ?? [],
+          tokenColors: this.#flattenTokenColorIssues(lint.tokenColors ?? []),
+          semanticTokenColors: lint.semanticTokenColors ?? [],
+          colors: lint.colors ?? [],
+        }
+      })
+
+      // Update watcher registrations
+      this.#stopWatching(uri.fsPath)
+      this.#setWatchers(theme)
+    } catch(error) {
+      this.#glog.error(error, error.stack)
+    }
+  }
+
+  /**
+   * Flattens token color issues that have nested occurrences.
+   *
+   * @param {Array} issues - Token color lint issues.
+   * @returns {Array} Flattened issues.
+   */
+  #flattenTokenColorIssues(issues) {
+    const result = []
+
+    for(const issue of issues) {
+      if(Array.isArray(issue.occurrences) && issue.occurrences.length > 0) {
+        for(const o of issue.occurrences) {
+          result.push({
+            ...issue,
+            location: o.location ?? issue.location,
+            message: issue.message
+              || `${issue.type}: ${issue.scope} (${o.name ?? o})`,
+          })
+        }
+      } else {
+        result.push(issue)
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Extracts palette data from a theme and sends it to the webview.
+   *
+   * @param {Theme} theme - The Theme object.
+   */
+  async #sendPaletteData(uri) {
+    try {
+      const theme = this.#themeMap.get(uri.fsPath)
+
+      if(!theme)
+        return
+
+      if(!theme.isCompiled())
+        throw Sass.new("Theme has not been built yet.")
+
+      const pool = theme.getPool()
+      const tokens = pool.getTokens().entries().filter(([name, _]) => name.startsWith("palette.") && !name.includes("__prior__"))
+      const resolvedPalette = {}
+
+      for(const [name, token] of tokens) {
+        const key = name.slice("palette.".length)
+        Data.setNestedValue(resolvedPalette, key.split("."), {raw: token.getRawValue(), value: token.getValue()})
+      }
+
+      this.#panel.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
     } catch(error) {
       this.#glog.error(error)
     }
   }
 
   /**
-   * Remove a theme from all its watched paths. Disposes watchers that
-   * no longer have any themes depending on them.
+   * Handles messages from the webview.
    *
-   * @param {string} themePath - The theme's file path
+   * @param {object} message - The message from the webview.
+   */
+  async #handleWebviewMessage(message) {
+    switch(message.type) {
+      case "ready":
+        await this.#sendCurrentState()
+        break
+      case "requestBuild":
+        await this.#buildThemeToDisk()
+        break
+      case "requestLint": {
+        const uri = this.#getActiveThemeUri()
+
+        if(uri)
+          await this.#lint(uri)
+
+        break
+      }
+
+      case "requestResolve":
+        await this.#resolveForWebview(message)
+        break
+      case "requestProof":
+        await this.#sendProof()
+        break
+      case "jumpToLocation":
+        await this.#gotoLocation(message.location)
+        break
+      case "toggleAutoBuild":
+        this.#setAutoBuild(message.enabled)
+        break
+      case "log":
+        this.#glog.info(`[webview]: ${message.msg}`)
+        break
+    }
+  }
+
+  /**
+   * Sends current state to the webview on ready.
+   */
+  async #sendCurrentState() {
+    const uri = this.#getActiveThemeUri()
+
+    if(!uri)
+      return
+
+    const theme = this.#themeMap.get(uri.fsPath)
+
+    if(!theme)
+      return
+
+    await this.#sendThemeData(uri)
+    this.#eventProvider.asyncEmit("file.loaded", uri)
+  }
+
+  /**
+   * Gets the URI of the currently active sassy theme.
+   *
+   * @returns {Uri|null}
+   */
+  #getActiveThemeUri() {
+    const uri = window.activeTextEditor?.document.uri
+
+    if(uri && this.#isSassyDefinitionFile(uri))
+      return uri
+
+    // Fallback to first loaded theme
+    const first = this.#themeMap.keys().next().value
+
+    return first ? Uri.file(first) : null
+  }
+
+  /**
+   * Resolves a color/token/semantic and sends the result to the webview.
+   *
+   * @param {object} param0 - The resolve request.
+   */
+  async #resolveForWebview({resolveType, key}) {
+    try {
+      const uri = this.#getActiveThemeUri()
+
+      if(!uri)
+        return
+
+      const theme = this.#themeMap.get(uri.fsPath)
+
+      if(!theme)
+        return
+
+      const resolver = new Resolve()
+      let data
+
+      if(resolveType === "color")
+        data = await resolver.color(theme, key)
+      else if(resolveType === "tokenColor")
+        data = await resolver.tokenColor(theme, key)
+      else if(resolveType === "semanticTokenColor")
+        data = await resolver.semanticTokenColor(theme, key)
+
+      this.#panel.postMessage({
+        type: "resolveResult",
+        data: {...data, key, resolveType}
+      })
+    } catch(error) {
+      this.#glog.error(error)
+      this.#panel.postMessage({type: "error", message: error.message})
+    }
+  }
+
+  /**
+   * Generates and sends the proof (composed YAML) to the webview.
+   */
+  async #sendProof() {
+    try {
+      const uri = this.#getActiveThemeUri()
+
+      if(!uri)
+        return
+
+      const theme = this.#themeMap.get(uri.fsPath)
+
+      if(!theme)
+        return
+
+      this.#panel.postMessage({
+        type: "proofResult",
+        data: {yaml: theme.getProof()}
+      })
+    } catch(error) {
+      this.#glog.error(error)
+      this.#panel.postMessage({type: "error", message: error.message})
+    }
+  }
+
+  /**
+   * Remove a theme from all its watched paths.
+   *
+   * @param {string} themePath - The theme's file path.
    */
   #stopWatching(themePath) {
     for(const [watchedPath, entry] of this.#watchers) {
@@ -194,11 +413,9 @@ class Sassy {
   }
 
   /**
-   * Update shared watchers for the theme and its dependencies. Adds
-   * the theme to existing watchers or creates new ones as needed.
-   * Removes the theme from watchers it no longer depends on.
+   * Update shared watchers for the theme and its dependencies.
    *
-   * @param {Theme} theme - The Theme object
+   * @param {Theme} theme - The Theme object.
    */
   #setWatchers(theme) {
     const themePath = theme.getSourceFile().path
@@ -209,7 +426,6 @@ class Sassy {
 
     newPaths.add(themePath)
 
-    // Remove this theme from watchers it no longer needs
     for(const [watchedPath, entry] of this.#watchers) {
       if(!newPaths.has(watchedPath)) {
         entry.themes.delete(themePath)
@@ -221,7 +437,6 @@ class Sassy {
       }
     }
 
-    // Add or join watchers for current deps
     for(const depPath of newPaths) {
       const existing = this.#watchers.get(depPath)
 
@@ -246,6 +461,11 @@ class Sassy {
     }
   }
 
+  /**
+   * Navigates to a file:line:col location in the editor.
+   *
+   * @param {string} location - Location string in file:line:col format.
+   */
   async #gotoLocation(location) {
     try {
       const [filePath, lineStr, colStr] = location.split(":")
@@ -283,128 +503,10 @@ class Sassy {
     }
   }
 
-  async #publishDiagnostics({uri, lint}) {
-    const theme = this.#themeMap.get(uri.fsPath)
-
-    if(!theme)
-      return
-
-    if(!this.#diagnostics.has(uri.fsPath)) {
-      const diag = languages.createDiagnosticCollection(`sassy - ${theme.getName()}`)
-
-      this.#subscriptions.push(diag)
-      this.#diagnostics.set(uri.fsPath, diag)
-    }
-
-    this.#stopWatching(uri.fsPath)
-    this.#setWatchers(theme)
-
-    const collection = this.#diagnostics.get(uri.fsPath)
-
-    collection.clear()
-
-    const severityMap = {
-      high: DiagnosticSeverity.Error,
-      medium: DiagnosticSeverity.Warning,
-      low: DiagnosticSeverity.Information,
-    }
-
-    const themeName = theme.getName()
-    const byFile = new Map()
-
-    const addIssue = (issue, category) => {
-      if(!issue.location)
-        return
-
-      const parts = issue.location.split(":")
-      const file = parts[0]
-      const line = Math.max(0, parseInt(parts[1], 10) - 1)
-      const col = Math.max(0, parseInt(parts[2], 10) - 1)
-
-      const message = issue.message
-        || `${issue.type}: ${issue.variable || issue.scope || issue.selector || ""}`
-      const severity = severityMap[issue.severity] ?? severityMap.low
-
-      const range = new Range(line, col, line, col)
-      const diag = new Diagnostic(range, message, severity)
-
-      diag.source = `sassy: ${themeName} (${category})`
-
-      if(!byFile.has(file))
-        byFile.set(file, [])
-
-      byFile.get(file).push(diag)
-    }
-
-    for(const issue of lint.variables ?? [])
-      addIssue(issue, "variables")
-
-    for(const issue of lint.tokenColors ?? []) {
-      if(Array.isArray(issue.occurrences) && issue.occurrences.length > 0) {
-        for(const o of issue.occurrences) {
-          addIssue({
-            ...issue,
-            location: o.location ?? issue.location,
-            message: issue.message
-              || `${issue.type}: ${issue.scope} (${o.name ?? o})`,
-          }, "tokenColors")
-        }
-      } else {
-        addIssue(issue, "tokenColors")
-      }
-    }
-
-    for(const issue of lint.semanticTokenColors ?? [])
-      addIssue(issue, "semanticTokenColors")
-
-    // Color validation against VS Code schema
-    const output = theme.getOutput()
-    const colors = output?.colors
-    const configOutputPath = theme.getSource().config?.output
-
-    if(colors && configOutputPath) {
-      const outputDir = FS.resolvePath(
-        new FileObject(uri.fsPath).parentPath,
-        configOutputPath
-      )
-      const outputFile = FS.resolvePath(outputDir, `${themeName}.color-theme.json`)
-      const outputExists = await workspace.fs.stat(Uri.file(outputFile))
-        .then(() => true, () => false)
-
-      if(outputExists) {
-        const validation = await Validator.validate(vscodeSchema, colors)
-        const invalidColors = validation.filter(v => v.status !== "valid")
-        const outputJson = JSON.stringify(output, null, 2)
-
-        const colorDiags = invalidColors.map(v => {
-          const line = this.#findPropertyLine(outputJson, v.property)
-          const range = new Range(line, 0, line, 0)
-          const severity = v.status === "invalid"
-            ? DiagnosticSeverity.Error
-            : DiagnosticSeverity.Warning
-          const diag = new Diagnostic(range, v.message || v.property, severity)
-
-          diag.source = `sassy: ${themeName} (colors)`
-          diag.code = v.property
-
-          return diag
-        })
-
-        byFile.set(outputFile, colorDiags)
-      }
-    }
-
-    for(const [file, diags] of byFile)
-      collection.set(Uri.file(file), diags)
-
-    const themeFile = {name: theme.name ?? uri.fsPath.split("/").pop(), path: uri.fsPath}
-    this.#diagnosticTreeProvider.addFile(themeFile, lint)
-  }
-
   /**
-   * Fired when a {@link vscode.TextDocument} is opened
+   * Fired when a document is opened.
    *
-   * @param {TextDocument} document
+   * @param {vscode.TextDocument} document
    */
   async #documentOpened(document) {
     try {
@@ -430,17 +532,9 @@ class Sassy {
         return
 
       const filePath = document.uri.fsPath
-      const collection = this.#diagnostics.get(filePath)
-
-      if(collection) {
-        collection.clear()
-        collection.dispose()
-        this.#diagnostics.delete(filePath)
-      }
 
       this.#stopWatching(filePath)
       this.#themeMap.delete(filePath)
-      this.#diagnosticTreeProvider.removeFile(filePath)
     } catch(error) {
       this.#glog.error(error)
     }
@@ -454,7 +548,6 @@ class Sassy {
       if(!themeUri || !this.#isSassyDefinitionFile(themeUri))
         return
 
-      // Ensure theme is loaded
       let theme = this.#themeMap.get(themeUri.fsPath)
 
       if(!theme) {
@@ -490,9 +583,16 @@ class Sassy {
 
       await workspace.fs.writeFile(outputUri, encoded)
 
-      window.showInformationMessage(`Built theme to ${outputFile}`)
+      this.#panel.postMessage({
+        type: "buildStatus",
+        data: {success: true, message: `Built to ${outputFile}`}
+      })
     } catch(error) {
       this.#glog.error(`Failed to build theme: ${error.message}`)
+      this.#panel.postMessage({
+        type: "buildStatus",
+        data: {success: false, message: error.message}
+      })
     }
   }
 
@@ -529,138 +629,6 @@ class Sassy {
     await this.#buildThemeToDisk(uri)
   }
 
-  #provideResolveActions(document, range, context) {
-    const actions = []
-
-    for(const diag of context.diagnostics) {
-      if(!diag.source?.startsWith("sassy:"))
-        continue
-
-      // Extract color name from color diagnostics
-      if(diag.source.includes("(colors)") && diag.code) {
-        const colorName = diag.code
-
-        // Find which theme this belongs to
-        const themePath = this.#findThemeForDiagnostic(diag.source)
-
-        if(!themePath)
-          continue
-
-        const action = new vscode.CodeAction(
-          `Resolve color: ${colorName}`,
-          vscode.CodeActionKind.QuickFix
-        )
-
-        action.command = {
-          command: "sassy.resolveColor",
-          title: "Resolve Color",
-          arguments: [themePath, colorName, document.uri, range.start.line],
-        }
-
-        action.diagnostics = [diag]
-        actions.push(action)
-      }
-    }
-
-    return actions
-  }
-
-  #findThemeForDiagnostic(source) {
-    const match = source.match(/^sassy:\s*(.+?)\s*\(/)
-
-    if(!match)
-      return null
-
-    const themeName = match[1]
-
-    for(const [path, theme] of this.#themeMap) {
-      if(theme.getName() === themeName)
-        return path
-    }
-
-    return null
-  }
-
-  async #resolveColor(themePath, colorName, uri, line) {
-    try {
-      const theme = this.#themeMap.get(themePath)
-
-      if(!theme)
-        return
-
-      const resolver = new Resolve()
-      const data = await resolver.color(theme, colorName)
-
-      if(!data?.found)
-        return
-
-      const threadKey = `${uri.toString()}:${line}:${colorName}`
-
-      // Dismiss existing thread at this location
-      this.#dismissResolve(threadKey)
-
-      const comments = []
-
-      // Build the trail as comments
-      if(data.trail?.length > 0) {
-        for(const step of data.trail) {
-          const indent = "  ".repeat(step.depth ?? 0)
-          const body = `${indent}${step.type}: ${step.value}`
-
-          comments.push({
-            body: new vscode.MarkdownString(`\`${body}\``),
-            mode: vscode.CommentMode.Preview,
-            author: {name: "sassy"},
-          })
-        }
-      }
-
-      if(data.resolution) {
-        comments.push({
-          body: new vscode.MarkdownString(
-            `**Resolution:** \`${data.resolution}\``
-          ),
-          mode: vscode.CommentMode.Preview,
-          author: {name: "sassy"},
-        })
-      }
-
-      const thread = this.#commentController.createCommentThread(
-        uri,
-        new Range(line, 0, line, 0),
-        comments
-      )
-
-      thread.label = `Resolve: ${colorName}`
-      thread.canReply = false
-      thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded
-
-      this.#resolveThreads.set(threadKey, thread)
-    } catch(error) {
-      this.#glog.error(`Failed to resolve color: ${error.message}`)
-    }
-  }
-
-  #dismissResolve(threadKey) {
-    const existing = this.#resolveThreads.get(threadKey)
-
-    if(existing) {
-      existing.dispose()
-      this.#resolveThreads.delete(threadKey)
-    }
-  }
-
-  #findPropertyLine(json, property) {
-    const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    const pattern = new RegExp(`^\\s*"${escaped}"\\s*:`, "m")
-    const match = pattern.exec(json)
-
-    if(!match)
-      return 0
-
-    return json.slice(0, match.index).split("\n").length - 1
-  }
-
   #isSassyDefinitionFile(uri) {
     return this.#sassyFileExtensionRegex.test(uri.fsPath)
   }
@@ -678,7 +646,7 @@ class Sassy {
         configOutputPath
       )
 
-      theme.withOptions({outputDir: outputPath})
+      theme.setOptions({outputDir: outputPath})
 
       return theme
     } catch(error) {
@@ -686,50 +654,8 @@ class Sassy {
     }
   }
 
-  async #gotoProperty(filePath, property) {
-    try {
-      const uri = Uri.file(filePath)
-      const doc = await workspace.openTextDocument(uri)
-      const text = doc.getText()
-
-      const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      const pattern = new RegExp(`"${escaped}"\\s*:`)
-      const match = pattern.exec(text)
-
-      if(!match)
-        return
-
-      const uriStr = uri.toString()
-      const existingTab = window.tabGroups.all
-        .flatMap(g => g.tabs.map(tab => ({tab, group: g})))
-        .find(({tab}) =>
-          tab.input instanceof TabInputText
-          && tab.input.uri.toString() === uriStr
-        )
-
-      const viewColumn = existingTab?.group.viewColumn ?? ViewColumn.One
-
-      const pos = doc.positionAt(match.index + 1)
-      const editor = await window
-        .showTextDocument(doc, {viewColumn, preview: false})
-
-      editor.revealRange(
-        new Range(pos, pos),
-        TextEditorRevealType.InCenterIfOutsideViewport
-      )
-
-      editor.selection = new Selection(
-        pos, pos.translate(0, property.length)
-      )
-    } catch(error) {
-      this.#glog.error(
-        `Failed to navigate to ${property}: ${error.message}`
-      )
-    }
-  }
-
   async deactivate() {
-    this.#diagnostics.forEach(v => v.dispose())
+    this.#watchers.forEach(v => v.watcher.dispose())
   }
 }
 
