@@ -69,9 +69,52 @@ class WebSassy {
       case "paletteData":
         this.#showPalette(message.data)
         break
+      case "buildStatus":
+        this.#buildStatus(message.data)
+        break
       case "error":
         this.#showError(message.message)
         break
+    }
+  }
+
+  #buildStatus(data) {
+    this.#setDirty(false)
+
+    if(data.success === false)
+      console.error(
+        data.error?.message
+        ??
+        "A unknown problem occurred during theme compilation."
+      )
+  }
+
+  #aborter
+
+  #setDirty(status) {
+    this.#aborter?.abort()
+
+    if(status) {
+      this.#aborter = new AbortController()
+      const els = document.querySelectorAll(".dirty-theme")
+
+      els.forEach(e => {
+        if(e.classList.contains("dirty"))
+          e.classList.remove("dirty")
+
+        e.classList.add("dirty")
+        e.addEventListener(
+          "transitionend",
+          ({target}) => setTimeout(() => target.classList.toggle("two"), 250),
+          {signal: this.#aborter.signal}
+        )
+      })
+    } else {
+      this.#aborter.abort()
+
+      document.
+        querySelectorAll(".dirty-theme").
+        forEach(e => e.classList.remove("dirty"))
     }
   }
 
@@ -85,7 +128,9 @@ class WebSassy {
     this.#elements.themeInfo.hidden = false
 
     this.#elements.themePath.textContent = data.relativePath || ""
-    this.#elements.switchAutobuild.selected = !!data.autoBuild
+    this.#elements.switchAutobuild.checked = !!data.autoBuild
+
+    this.#setDirty(data.dirty)
   }
 
   #updateDiagnostics(data) {
@@ -104,7 +149,7 @@ class WebSassy {
     for(const category of categories) {
       const items = data[category]
       const group = document.createElement("vscode-tree-item")
-      group.setAttribute("open", true)
+      group.setAttribute("open", "")
       const groupName = document.createElement("div")
       groupName.textContent = category.toLocaleUpperCase()
       group.appendChild(groupName)
@@ -140,77 +185,68 @@ class WebSassy {
         actions.appendChild(itemIcon)
         message.appendChild(actions)
 
+        const btn = document.createElement("vscode-toolbar-button")
+        btn.setAttribute("icon", "chevron-up")
+        btn.className="toggle-button"
+        message.appendChild(btn)
+
         const details = document.createElement("div")
         details.className = "diag-card-details"
 
         const msgLine = document.createElement("div")
         msgLine.className = "diag-card-message"
         msgLine.textContent = issue.message
-          || `${issue.type}: ${issue.variable || issue.scope || issue.selector || ""}`
+          || `${issue.type}: ${issue.variable || issue.scope || issue.selector || ((issue.broadScope && issue.specificScope) && issue.broadScope + " > " + issue.specificScope) || ""}`
         details.appendChild(msgLine)
 
         // Category-specific enrichment
         const meta = document.createElement("div")
-        meta.className = "diag-card-meta"
+        meta.className = "diag-card-meta toggleable"
 
         if(category === "colors") {
-          if(issue.property) {
-            const prop = document.createElement("span")
-            prop.className = "diag-card-tag"
-            prop.textContent = issue.property
-            meta.appendChild(prop)
-          }
-
           if(issue.value && isHexColor(issue.value)) {
-            const swatch = document.createElement("span")
-            swatch.className = "diag-card-swatch"
-            swatch.style.backgroundColor = issue.value
-            meta.appendChild(swatch)
+            const label = document.createElement("span")
+            label.textContent = "Value:"
+            label.className = "diag-card-value-label muted toggleable"
+            meta.appendChild(label)
 
             const val = document.createElement("span")
-            val.className = "diag-card-value"
+            val.className = "diag-card-value muted toggleable"
             val.textContent = issue.value
             meta.appendChild(val)
+
+            const swatch = document.createElement("span")
+            swatch.className = "diag-card-swatch toggleable"
+            swatch.style.backgroundColor = issue.value
+            meta.appendChild(swatch)
           }
 
           if(issue.description) {
             const desc = document.createElement("div")
-            desc.className = "diag-card-description"
+            desc.className = "diag-card-description muted toggleable"
             desc.textContent = issue.description
             details.appendChild(desc)
           }
         } else if(category === "variables") {
-          if(issue.variable) {
-            const varTag = document.createElement("span")
-            varTag.className = "diag-card-tag variable"
-            varTag.textContent = issue.variable
-            meta.appendChild(varTag)
-          }
-
-          if(issue.occurrence) {
-            // const file = document.createElement("span")
-            // file.className = "diag-card-value"
-            // file.textContent = issue.occurrence
-            // meta.appendChild(file)
-          }
+          // everything is already fine here.
         } else if(category === "tokenColors") {
           if(issue.scope) {
             const scopeTag = document.createElement("span")
-            scopeTag.className = "diag-card-tag"
+            scopeTag.className = "diag-card-tag toggleable"
             scopeTag.textContent = issue.scope
             meta.appendChild(scopeTag)
           }
 
           if(issue.rule) {
             const ruleTag = document.createElement("span")
-            ruleTag.className = "diag-card-value"
+            ruleTag.className = "diag-card-value toggleable"
             ruleTag.textContent = issue.rule
             meta.appendChild(ruleTag)
           }
 
           if(issue.broadScope && issue.specificScope) {
             const precDiv = document.createElement("div")
-            precDiv.className = "diag-card-precedence"
+            precDiv.className = "diag-card-precedence toggleable"
             precDiv.innerHTML =
               `<span class="diag-card-tag">${issue.broadScope}</span>`
               + ` masks <span class="diag-card-tag">${issue.specificScope}</span>`
@@ -219,14 +255,14 @@ class WebSassy {
         } else if(category === "semanticTokenColors") {
           if(issue.selector) {
             const selTag = document.createElement("span")
-            selTag.className = "diag-card-tag"
+            selTag.className = "diag-card-tag toggleable"
             selTag.textContent = issue.selector
             meta.appendChild(selTag)
           }
 
           if(issue.property) {
             const propTag = document.createElement("span")
-            propTag.className = "diag-card-value"
+            propTag.className = "diag-card-value toggleable"
             propTag.textContent = issue.property
             meta.appendChild(propTag)
           }
@@ -237,10 +273,16 @@ class WebSassy {
 
         if(issue.location) {
           const locLine = document.createElement("div")
-          locLine.className = "diag-card-location"
+          locLine.className = "diag-card-location toggleable"
           locLine.textContent = issue.location
           details.appendChild(locLine)
         }
+
+        btn.addEventListener("click", () => {
+          btn.classList.toggle("open")
+          const toggleable = item.querySelectorAll(".toggleable")
+          toggleable.forEach(e => e.classList.toggle("open"))
+        })
 
         message.appendChild(details)
         item.appendChild(message)

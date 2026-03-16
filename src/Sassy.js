@@ -1,4 +1,4 @@
-import {Lint, Resolve, Theme} from "@gesslar/sassy"
+import {Lint, Resolve, Theme, WriteStatus} from "@gesslar/sassy"
 import {Cache, Data, FileObject, FileSystem as FS, Glog} from "@gesslar/toolkit"
 import * as vscode from "vscode"
 
@@ -25,6 +25,8 @@ class Sassy {
   #themeMap = new Map()
   /** @type {Set<string>} */
   #autoBuildThemes = new Set()
+  /** @type {Set<string>} */
+  #dirtyThemes = new Set()
   /** @type {Cache} */
   #cache = new Cache()
   #schema
@@ -107,6 +109,11 @@ class Sassy {
     if(!theme)
       return
 
+    if(!this.#autoBuildThemes.has(uri.fsPath))
+      this.#autoBuildThemes.add(uri.fsPath)
+
+    this.#updateAutoBuildContext()
+
     const title = theme.getName() ?? "Sassy"
     const panel = new SassyPanel({
       context: this.#context,
@@ -145,6 +152,7 @@ class Sassy {
         return
 
       await theme.build()
+      this.#dirtyThemes.add(uri.fsPath)
 
       this.#eventProvider.asyncEmit("theme.built", uri)
     } catch(error) {
@@ -202,6 +210,7 @@ class Sassy {
             relativePath: workspace.asRelativePath(uri),
             proof: theme.getProof(),
             autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
+            dirty: this.#dirtyThemes.has(uri.fsPath),
           }
         })
       }
@@ -226,6 +235,7 @@ class Sassy {
         type: "diagnostics",
         data: {
           themeName: theme.getName(),
+          dirty: this.#dirtyThemes.has(uri.fsPath),
           variables: lint.variables ?? [],
           tokenColors: this.#flattenTokenColorIssues(lint.tokenColors ?? []),
           semanticTokenColors: lint.semanticTokenColors ?? [],
@@ -516,6 +526,8 @@ class Sassy {
         return
 
       await this.#ensureTheme(document.uri)
+      this.#autoBuildThemes.add(document.uri.fsPath)
+      this.#updateAutoBuildContext()
       this.#eventProvider.asyncEmit("file.loaded", document.uri)
     } catch(error) {
       this.#glog.error(error)
@@ -531,6 +543,8 @@ class Sassy {
 
       this.#stopWatching(filePath)
       this.#themeMap.delete(filePath)
+      this.#dirtyThemes.delete(filePath)
+      this.#autoBuildThemes.delete(filePath)
     } catch(error) {
       this.#glog.error(error)
     }
@@ -538,6 +552,7 @@ class Sassy {
 
   async #buildThemeToDisk(explorerUri) {
     try {
+      // debugger
       const themeUri = explorerUri
         ?? window.activeTextEditor?.document.uri
 
@@ -549,33 +564,25 @@ class Sassy {
       if(!theme)
         return
 
-      const output = theme.getOutput()
-
-      if(!output)
+      if(!theme.canWrite())
         return
 
-      const configOutputPath = theme.getSource().config?.output
+      const result = await theme.write()
 
-      if(!configOutputPath) {
-        window.showWarningMessage("No output path configured in theme file.")
+      this.#dirtyThemes.delete(themeUri.fsPath)
 
-        return
-      }
+      const message = result.status === WriteStatus.SKIPPED
+        ? `No changes to write`
+        : `Built to ${result.file.path}`
 
-      const outputDir = FS.resolvePath(
-        new FileObject(themeUri.fsPath).parentPath,
-        configOutputPath
-      )
-      const outputFile = FS.resolvePath(outputDir, `${theme.getName()}.color-theme.json`)
-      const outputUri = Uri.file(outputFile)
-      const encoded = Buffer.from(JSON.stringify(output, null, 2), "utf-8")
-
-      await workspace.fs.writeFile(outputUri, encoded)
+      this.#glog.info("Posting message about a build status.")
 
       this.#getPanelForTheme(themeUri)?.postMessage({
         type: "buildStatus",
-        data: {success: true, message: `Built to ${outputFile}`}
+        data: {success: true, message}
       })
+
+      this.#sendThemeData(themeUri)
     } catch(error) {
       const uri = explorerUri ?? window.activeTextEditor?.document.uri
 
@@ -615,7 +622,16 @@ class Sassy {
     if(!this.#autoBuildThemes.has(uri.fsPath))
       return
 
-    await this.#buildThemeToDisk(uri)
+    const theme = this.#themeMap.get(uri.fsPath)
+
+    if(!theme?.canWrite())
+      return
+
+    try {
+      this.#buildThemeToDisk(uri)
+    } catch(error) {
+      this.#glog.error(`Auto-build failed: ${error.message}`)
+    }
   }
 
   /**

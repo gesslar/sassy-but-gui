@@ -23,12 +23,16 @@
 
     <div id="theme-info">
       <vscode-toolbar-container>
-        <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">Build
-          theme</vscode-toolbar-button>
+        <span class="dirty-theme">
+          <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">
+            Build theme
+          </vscode-toolbar-button>
+        </span>
         <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
       </vscode-toolbar-container>
       <div id="theme-header">
         <span id="theme-path">—</span>
+        <!-- <span id="dirty-theme"><vscode-icon name="symbol-color">Dirty</vscode-icon></span> -->
       </div>
     </div>
 
@@ -62,7 +66,7 @@
               <p>No diagnostics to show.</p>
             </div>
 
-            <vscode-tree indent="0">
+            <vscode-tree>
               <div id="diag-list"></div>
             </vscode-tree>
           </div>
@@ -116,7 +120,7 @@
             <p>Load a theme to see its composed theme before evaluation.</p>
           </div>
 
-          <div id="proof-scroll" hidden>
+          <div id="proof-scroll">
             <pre id="proof-content" class="proof-block"></pre>
           </div>
 

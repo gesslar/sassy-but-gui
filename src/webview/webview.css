@@ -38,6 +38,10 @@ body {
   user-select: none;
 }
 
+.muted {
+  color: var(--text-muted)
+}
+
 .tt {
   display: inline;
   font-family: var(--font-family-mono);
@@ -63,6 +67,20 @@ main {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+
+    .dirty-theme {
+      outline: 1px solid transparent;
+      border-radius: .25rem;
+
+      &.dirty {
+        outline-color: var(--warning-foreground);
+        transition: all 2s ease-in-out;
+      }
+
+      &.dirty.two {
+        outline-color: var(--error-foreground);
+      }
+    }
 
     #theme-header {
       display: flex;
@@ -178,98 +196,109 @@ main {
         flex-direction: column;
 
         .diag-card {
+          margin-left: 1rem;
           display: flex;
           align-items: flex-start;
           gap: 0.5rem;
           padding: 0.2rem 0;
-        }
 
-        .diag-card-icon {
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          padding-top: 0.1rem;
-
-          [name="info"] {
-            --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
+          .toggleable:not(.open) {
+            display: none;
           }
 
-          [name="warning"] {
-            --vscode-icon-foreground: var(--vscode-editorWarning-foreground);
+          .toggle-button {
+            transform: rotate(90deg);
+
+            &.open {
+              transform: rotate(180deg);
+            }
           }
 
-          [name="error"] {
-            --vscode-icon-foreground: var(--vscode-editorError-foreground);
+          .diag-card-icon {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding-top: 0.1rem;
+
+            [name="info"] {
+              --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
+            }
+
+            [name="warning"] {
+              --vscode-icon-foreground: var(--vscode-editorWarning-foreground);
+            }
+
+            [name="error"] {
+              --vscode-icon-foreground: var(--vscode-editorError-foreground);
+            }
           }
-        }
 
-        .diag-card-details {
-          display: flex;
-          flex-direction: column;
-          gap: 0.15rem;
-          min-width: 0;
-        }
+          .diag-card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            min-width: 0;
+            margin-top: 0;
+          }
 
-        .diag-card-message {
-          font-size: 0.9rem;
-          word-break: break-word;
-        }
+          .diag-card-message {
+            font-size: 0.9rem;
+            word-break: break-word;
+          }
 
-        .diag-card-meta {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          flex-wrap: wrap;
-          margin-top: 0.15rem;
-        }
+          .diag-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            margin-top: 0.15rem;
+          }
 
-        .diag-card-tag {
-          font-size: 0.75em;
-          font-family: var(--vscode-editor-font-family);
-          background: var(--vscode-badge-background);
-          color: var(--vscode-badge-foreground);
-          padding: 0.1rem 0.4rem;
-          border-radius: 3px;
-          white-space: nowrap;
+          .diag-card-tag {
+            font-size: 0.9em;
+            font-family: var(--vscode-editor-font-family);
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            white-space: nowrap;
+          }
 
-          // &.variable {
-          //   background: var(--vscode-editorInfo-foreground);
-          //   color: var(--vscode-editor-background);
-          // }
-        }
+          .diag-card-value-label {
+            font-size: 0.9em;
+          }
 
-        .diag-card-value {
-          font-size: 0.75em;
-          font-family: var(--vscode-editor-font-family);
-          color: var(--vscode-descriptionForeground);
-        }
+          .diag-card-value {
+            font-size: 0.9em;
+            font-family: var(--font-family-mono);
+          }
 
-        .diag-card-swatch {
-          width: 12px;
-          height: 12px;
-          border-radius: 2px;
-          border: 1px solid var(--vscode-panel-border);
-          flex-shrink: 0;
-        }
+          .diag-card-swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid var(--vscode-panel-border);
+            flex-shrink: 0;
+          }
 
-        .diag-card-description {
-          font-size: 0.75em;
-          color: var(--vscode-descriptionForeground);
-          font-style: italic;
-          margin-top: 0.15rem;
-        }
+          .diag-card-description {
+            font-size: 0.9em;
+            font-style: italic;
+            margin-top: 0.15rem;
+          }
 
-        .diag-card-precedence {
-          font-size: 0.75em;
-          color: var(--vscode-descriptionForeground);
-          margin-top: 0.15rem;
-        }
+          .diag-card-precedence {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 0.15rem;
+          }
 
-        .diag-card-location {
-          font-size: 0.75em;
-          color: var(--vscode-descriptionForeground);
-          font-family: var(--vscode-editor-font-family);
-          word-break: break-all;
+          .diag-card-location {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+            font-family: var(--vscode-editor-font-family);
+            word-break: break-all;
+          }
         }
       }
     }
@@ -296,6 +325,15 @@ main {
     }
 
     #resolve-result {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+
+      &[hidden] {
+        display: none;
+      }
+
       h3 {
         margin: 0 0 0.5rem;
         font-size: 1em;
@@ -452,7 +490,7 @@ main {
     }
 
     .swatch-name {
-      font-size: 0.8em;
+      font-size: 0.9em;
       font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -460,7 +498,7 @@ main {
     }
 
     .swatch-value {
-      font-size: 0.75em;
+      font-size: 0.9em;
       font-family: var(--vscode-editor-font-family);
       color: var(--vscode-descriptionForeground);
     }
