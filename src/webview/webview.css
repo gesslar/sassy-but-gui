@@ -1,34 +1,36 @@
 /* Material Design 3 theme token overrides — map to VS Code theme */
 :root {
-  --md-sys-color-primary: var(--vscode-button-background);
-  --md-sys-color-on-primary: var(--vscode-button-foreground);
-  --md-sys-color-primary-container: var(--vscode-button-secondaryBackground);
-  --md-sys-color-on-primary-container: var(--vscode-button-secondaryForeground);
-  --md-sys-color-surface: var(--vscode-editor-background);
-  --md-sys-color-on-surface: var(--vscode-editor-foreground);
-  --md-sys-color-surface-container: var(--vscode-sideBar-background);
-  --md-sys-color-surface-container-low: var(--vscode-editorWidget-background);
-  --md-sys-color-surface-container-highest: var(--vscode-input-background);
-  --md-sys-color-on-surface-variant: var(--vscode-descriptionForeground);
-  --md-sys-color-outline: var(--vscode-input-border);
-  --md-sys-color-outline-variant: var(--vscode-panel-border);
-  --md-sys-color-error: var(--vscode-errorForeground);
-  --md-sys-color-secondary-container: var(--vscode-badge-background);
-  --md-sys-color-on-secondary-container: var(--vscode-badge-foreground);
-  --md-sys-typescale-body-medium-font: var(--vscode-font-family);
-  --md-sys-typescale-body-large-font: var(--vscode-font-family);
-  --md-sys-typescale-label-large-font: var(--vscode-font-family);
-  --md-sys-typescale-title-medium-font: var(--vscode-font-family);
+  --info-foreground: var(--vscode-editorInfo-foreground);
+  --warning-foreground: var(--vscode-editorWarning-foreground);
+  --error-foreground: var(--vscode-editorError-foreground);
+
+  --info-background: var(--vscode-editorInfo-background);
+  --warning-background: var(--vscode-editorWarning-background);
+  --error-background: var(--vscode-editorError-background);
+
+  --panel-foreground: var(--vscode-sideBar-foreground, var(--vscode-foreground));
+  --panel-background: var(--vscode-sideBar-background, var(--vscode-background));
+
+  --editor-foreground: var(--vscode-editor-foreground);
+  --editor-background: var(--vscode-editor-background);
+
+  --font-family: var(--vscode-font-family);
+  --font-family-mono: var(--vscode-editor-font-family);
+  --font-size: var(--vscode-font-size);
+
+  --text-muted: var(--vscode-descriptionForeground);
+  --text-mono-foreground: var(--vscode-textPreformat-foreground);
+  --text-mono-background: var(--vscode-textPreformat-background);
 }
 
 body {
   padding: 0;
   margin: 0;
   overflow: hidden;
-  background: var(--vscode-sideBar-background);
-  color: var(--vscode-editor-foreground);
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size, 13px);
+  color: var(--panel-foreground);
+  background: var(--panel-background);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -38,38 +40,13 @@ body {
 
 .tt {
   display: inline;
-  font-family: var(--vscode-editor-font-family);
+  font-family: var(--font-family-mono);
   white-space: pre-wrap;
-  color: var(--vscode-textPreformat-foreground);
-  background-color: var(--vscode-textPreformat-background);
+  color: var(--text-mono-foreground);
+  background-color: var(--text-mono-background);
   border-radius: .2rem;
   padding: 0.1rem .2rem;
   margin: 0 .1rem;
-}
-
-/* Tab bar */
-nav#tab-bar {
-  background: var(--vscode-editorStickyScroll-background);
-  border-bottom: 1px solid var(--vscode-panel-border);
-
-  md-tabs {
-    --md-primary-tab-container-color: transparent;
-    --md-primary-tab-active-indicator-color: var(--vscode-button-background);
-    --md-primary-tab-label-text-color: var(--vscode-descriptionForeground);
-    --md-primary-tab-active-label-text-color: var(--vscode-editor-foreground);
-    --md-primary-tab-active-hover-label-text-color: var(--vscode-editor-foreground);
-    --md-primary-tab-hover-label-text-color: var(--vscode-editor-foreground);
-    width: 100%;
-  }
-
-  md-primary-tab {
-    --md-primary-tab-container-height: 36px;
-    font-size: 0.85em;
-  }
-
-  .codicon {
-    font-size: 14px;
-  }
 }
 
 /* Main content area */
@@ -79,232 +56,222 @@ main {
   display: flex;
   flex-direction: column;
 
+  #theme-info {
+    color: var(--panel-foreground);
+    background: var(--panel-background);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 
+    #theme-header {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+
+      span#theme-path {
+        color: var(--text-muted);
+        word-break: break-all;
+        font-weight: 300;
+        font-size: 1.3rem;
+        font-variant: small-caps;
+      }
+    }
+
+    vscode-toolbar-container {
+      align-self: flex-end;
+    }
+  }
+
+  #main-tabs {
+    --vscode-panel-background: var(--editor-background);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: .25rem;
+    margin: .25rem;
+  }
+
+  vscode-tab-panel {
+    min-height: 0;
+    overflow: hidden;
+  }
 
   .tab-panel {
-    flex: 1;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-
-    &[hidden] {
-      display: none;
-    }
-  }
-
-  .panel-content {
-    padding: 1rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Empty states */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    gap: 0.75rem;
-    color: var(--vscode-descriptionForeground);
-
-    p {
-      text-align: center;
-      max-width: 300px;
-    }
-  }
-
-  .hero-icon {
-    font-size: 48px;
-    opacity: 0.4;
-
-    &.success {
-      color: var(--vscode-charts-green, var(--vscode-testing-iconPassed));
-      opacity: 0.7;
-    }
-  }
-
-  /* Dashboard */
-  vscode-label {
-    background: var(--vscode-editor-background);
     padding: 0.5rem;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
 
-    h2 {
-      margin: 0 0 0.25rem;
-      font-size: 1.2em;
-      font-weight: 600;
-      display: inline;
-    }
-
-    .description {
-      margin: 0;
+    /* Empty states */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 0.75rem;
       color: var(--vscode-descriptionForeground);
-      font-size: 0.85em;
-      font-family: var(--vscode-editor-font-family);
-      word-break: break-all;
-      display: inline;
-    }
-  }
 
-  .action-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    flex-wrap: wrap;
-  }
+      &[hidden] {
+        display: none;
+      }
 
-  .switch-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    font-size: 0.9em;
-  }
-
-  .status-card {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--vscode-editor-background);
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
-    font-size: 0.9em;
-
-    &.success .status-icon {
-      color: var(--vscode-charts-green, var(--vscode-testing-iconPassed));
-    }
-
-    &.error .status-icon {
-      color: var(--vscode-errorForeground);
+      p {
+        text-align: center;
+        max-width: 300px;
+      }
     }
   }
 
   /* Diagnostics */
-  #view-diagnostics {
-    [hidden] {
-      display: none;
-    }
+  #diagnostics {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-      flex-wrap: wrap;
-
-      md-outlined-text-field {
-        flex: 1;
-        min-width: 200px;
-        --md-outlined-text-field-container-shape: 6px;
-      }
-    }
-
-    #diag-list {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .diag-group-header {
-      font-size: 0.8em;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--vscode-descriptionForeground);
-      padding: 0.5rem 0.25rem 0.25rem;
-      border-bottom: 1px solid var(--vscode-panel-border);
-      margin-top: 0.5rem;
-
-      &:first-child {
-        margin-top: 0;
-      }
-    }
-
-    .diag-item {
-      padding: 0.4rem 0.5rem;
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-panel-border);
-      border-radius: 4px;
-      cursor: pointer;
-
-      &:hover {
-        background: var(--vscode-list-hoverBackground);
-      }
-
-      &:focus-visible {
-        outline: 1px solid var(--vscode-focusBorder);
-        outline-offset: -1px;
-      }
-
-      &.severity-error {
-        border-left: 3px solid var(--vscode-errorForeground);
-      }
-
-      &.severity-warning {
-        border-left: 3px solid var(--vscode-editorWarning-foreground);
-      }
-
-      &.severity-info {
-        border-left: 3px solid var(--vscode-editorInfo-foreground);
-      }
-
-      &.hidden {
+    #view-diagnostics {
+      [hidden] {
         display: none;
       }
-    }
 
-    .diag-header {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
+      #filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
 
-    .diag-icon {
-      font-size: 14px;
-      flex-shrink: 0;
-
-      &.codicon-error {
-        color: var(--vscode-errorForeground);
+        md-outlined-text-field {
+          flex: 1;
+          min-width: 200px;
+          --md-outlined-text-field-container-shape: 6px;
+        }
       }
 
-      &.codicon-warning {
-        color: var(--vscode-editorWarning-foreground);
+      #diag-empty {
+        .hero-icon {
+          font-size: 48px;
+          opacity: 0.4;
+
+          &.success {
+            color: var(--vscode-charts-green, var(--vscode-testing-iconPassed));
+            opacity: 0.7;
+          }
+        }
       }
 
-      &.codicon-info {
-        color: var(--vscode-editorInfo-foreground);
+      vscode-tree {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
       }
-    }
 
-    .diag-message {
-      flex: 1;
-      font-size: 0.85em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+      /* Tree view card layout */
+      #diag-list {
+        display: flex;
+        flex-direction: column;
 
-    .diag-category.badge {
-      font-size: 0.7em;
-      padding: 0.1rem 0.4rem;
-      border-radius: 1rem;
-      background: var(--vscode-badge-background);
-      color: var(--vscode-badge-foreground);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
+        .diag-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          padding: 0.2rem 0;
+        }
 
-    .diag-location {
-      font-size: 0.75em;
-      color: var(--vscode-descriptionForeground);
-      font-family: var(--vscode-editor-font-family);
-      margin-top: 0.2rem;
-      padding-left: 1.2rem;
+        .diag-card-icon {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          padding-top: 0.1rem;
+
+          [name="info"] {
+            --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
+          }
+
+          [name="warning"] {
+            --vscode-icon-foreground: var(--vscode-editorWarning-foreground);
+          }
+
+          [name="error"] {
+            --vscode-icon-foreground: var(--vscode-editorError-foreground);
+          }
+        }
+
+        .diag-card-details {
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+          min-width: 0;
+        }
+
+        .diag-card-message {
+          font-size: 0.9rem;
+          word-break: break-word;
+        }
+
+        .diag-card-meta {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          flex-wrap: wrap;
+          margin-top: 0.15rem;
+        }
+
+        .diag-card-tag {
+          font-size: 0.75em;
+          font-family: var(--vscode-editor-font-family);
+          background: var(--vscode-badge-background);
+          color: var(--vscode-badge-foreground);
+          padding: 0.1rem 0.4rem;
+          border-radius: 3px;
+          white-space: nowrap;
+
+          // &.variable {
+          //   background: var(--vscode-editorInfo-foreground);
+          //   color: var(--vscode-editor-background);
+          // }
+        }
+
+        .diag-card-value {
+          font-size: 0.75em;
+          font-family: var(--vscode-editor-font-family);
+          color: var(--vscode-descriptionForeground);
+        }
+
+        .diag-card-swatch {
+          width: 12px;
+          height: 12px;
+          border-radius: 2px;
+          border: 1px solid var(--vscode-panel-border);
+          flex-shrink: 0;
+        }
+
+        .diag-card-description {
+          font-size: 0.75em;
+          color: var(--vscode-descriptionForeground);
+          font-style: italic;
+          margin-top: 0.15rem;
+        }
+
+        .diag-card-precedence {
+          font-size: 0.75em;
+          color: var(--vscode-descriptionForeground);
+          margin-top: 0.15rem;
+        }
+
+        .diag-card-location {
+          font-size: 0.75em;
+          color: var(--vscode-descriptionForeground);
+          font-family: var(--vscode-editor-font-family);
+          word-break: break-all;
+        }
+      }
     }
   }
 
@@ -340,8 +307,9 @@ main {
         gap: 2px;
         margin-top: 1rem;
         margin-bottom: 0.75rem;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
-        max-height: calc(100vh - 15rem);
 
         .resolve-step {
           display: flex;
@@ -407,8 +375,9 @@ main {
     }
 
     #proof-scroll {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      max-height: calc(100vh - 8rem);
       outline: 1px solid var(--vscode-panel-border);
       border-radius: 6px;
 
@@ -432,8 +401,9 @@ main {
 
   /* Palette */
   #view-palette {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
-    max-height: calc(100vh - 8rem);
 
     [hidden] {
       display: none;

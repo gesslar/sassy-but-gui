@@ -111,6 +111,7 @@
         },
         {
           "command": "sassy.showPanel",
+          "when": "resourceFilename =~ /\\.sassy\\.yaml$/",
           "group": "sassy"
         }
       ]
