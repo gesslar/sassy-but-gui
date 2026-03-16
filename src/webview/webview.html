@@ -18,48 +18,21 @@
 </head>
 
 <body>
+
   <main id="tab-bar">
-    <div id="theme-info" hidden>
-      <vscode-label shadow>
-        <h2 id="theme-name"></h2>
-        <p id="theme-path" class="description">—</p>
-      </vscode-label>
+
+    <div id="theme-info">
+      <vscode-toolbar-container>
+        <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">Build
+          theme</vscode-toolbar-button>
+        <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
+      </vscode-toolbar-container>
+      <div id="theme-header">
+        <span id="theme-path">—</span>
+      </div>
     </div>
 
     <vscode-tabs id="main-tabs" panel selected-index="0">
-
-      <!-- Dashboard -->
-      <vscode-tab-header slot="header" id="tab-dashboard" aria-controls="view-dashboard">
-        <i class="codicon codicon-dashboard" slot="icon"></i>
-        Dashboard
-      </vscode-tab-header>
-
-      <vscode-tab-panel>
-        <div id="view-dashboard" class="tab-panel panel-content">
-
-          <vscode-toolbar-container>
-            <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">Build
-              theme</vscode-toolbar-button>
-            <vscode-toolbar-button id="btn-lint" icon="debug" label="Lint theme">Lint theme</vscode-toolbar-button>
-            <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
-          </vscode-toolbar-container>
-
-          <div id="no-theme" class="empty-state">
-            <i class="codicon codicon-color-mode hero-icon"></i>
-            <p>Open a <span class="tt">.sassy.yaml</span> file to get started.</p>
-          </div>
-
-          <div class="action-row">
-          </div>
-
-          <div id="build-status" class="status-card" hidden>
-            <i class="codicon codicon-check status-icon"></i>
-            <span id="build-status-text">Ready</span>
-          </div>
-        </div>
-
-        </div>
-      </vscode-tab-panel>
 
       <!-- Diagnostics -->
       <vscode-tab-header slot="header" id="tab-diagnostics" aria-controls="view-diagnostics">
@@ -67,28 +40,32 @@
       </vscode-tab-header>
 
       <vscode-tab-panel>
-        <div id="view-diagnostics" class="tab-panel panel-content">
-          <div class="filter-bar">
-            <vscode-toolbar-container>
-              <vscode-textfield id="diag-filter" label="Filter" type="text" placeholder="Filter by message or location">
-                <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
-              </vscode-textfield>
+        <div id="diagnostics">
+          <div id="view-diagnostics" class="tab-panel">
+            <div id="filter-bar">
+              <vscode-toolbar-container>
+                <vscode-textfield id="diag-filter" label="Filter" type="text"
+                  placeholder="Filter by message or location">
+                  <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
+                </vscode-textfield>
 
-              <vscode-checkbox-group id="severity-filters">
-                <vscode-checkbox checked="true" toggle id="filter-errors" label="Errors"></vscode-checkbox>
-                <vscode-checkbox checked="true" toggle id="filter-warnings" label="Warnings"></vscode-checkbox>
-                <vscode-checkbox checked="true" toggle id="filter-info" label="Info"></vscode-checkbox>
-              </vscode-checkbox-group>
-            </vscode-toolbar-container>
+                <vscode-checkbox-group id="severity-filters">
+                  <vscode-checkbox checked="true" toggle id="filter-errors" label="Errors"></vscode-checkbox>
+                  <vscode-checkbox checked="true" toggle id="filter-warnings" label="Warnings"></vscode-checkbox>
+                  <vscode-checkbox checked="true" toggle id="filter-info" label="Info"></vscode-checkbox>
+                </vscode-checkbox-group>
+              </vscode-toolbar-container>
+            </div>
+
+            <div id="diag-empty" class="empty-state">
+              <i class="codicon codicon-pass hero-icon success"></i>
+              <p>No diagnostics to show.</p>
+            </div>
+
+            <vscode-tree indent="0">
+              <div id="diag-list"></div>
+            </vscode-tree>
           </div>
-
-          <div id="diag-empty" class="empty-state">
-            <i class="codicon codicon-pass hero-icon success"></i>
-            <p>No diagnostics to show.</p>
-          </div>
-
-          <div id="diag-list"></div>
-
         </div>
       </vscode-tab-panel>
 
@@ -98,7 +75,7 @@
       </vscode-tab-header>
 
       <vscode-tab-panel>
-        <div id="view-resolve" class="tab-panel panel-content">
+        <div id="view-resolve" class="tab-panel">
 
           <div class="resolve-form" hidden>
             <vscode-toolbar-container>
@@ -133,7 +110,7 @@
       </vscode-tab-header>
 
       <vscode-tab-panel>
-        <div id="view-proof" class="tab-panel panel-content">
+        <div id="view-proof" class="tab-panel">
 
           <div id="proof-empty" class="empty-state">
             <p>Load a theme to see its composed theme before evaluation.</p>
@@ -152,7 +129,7 @@
       </vscode-tab-header>
 
       <vscode-tab-panel>
-        <div id="view-palette" class="tab-panel panel-content">
+        <div id="view-palette" class="tab-panel">
 
           <div id="palette-empty" class="empty-state">
             <p>No palette data available.</p>

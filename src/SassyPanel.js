@@ -31,18 +31,52 @@ export default class SassyPanel {
   #panel = null
   /** @type {(unknown) => {}} */
   #messageHandler
+  /** @type {string} */
+  #title
+  /** @type {Uri} */
+  #themeUri
+  /** @type {(() => void)|null} */
+  #onDispose = null
 
   /**
    * Creates a new SassyPanel instance.
    *
-   * @param {vscode.ExtensionContext} context - The extension context.
-   * @param {Glog} glog - Logger instance.
-   * @param {(unknown) => {}} messageHandler - Callback for webview messages.
+   * @param {object} options - Panel options.
+   * @param {vscode.ExtensionContext} options.context - The extension context.
+   * @param {Glog} options.glog - Logger instance.
+   * @param {(unknown) => {}} options.messageHandler - Callback for webview messages.
+   * @param {string} options.title - The panel title.
+   * @param {Uri} options.themeUri - The theme file URI.
+   * @param {() => void} [options.onDispose] - Callback when panel is disposed.
    */
-  constructor(context, glog, messageHandler) {
+  constructor({context, glog, messageHandler, title, themeUri, onDispose}) {
     this.#context = context
     this.#glog = glog
     this.#messageHandler = messageHandler
+    this.#title = title
+    this.#themeUri = themeUri
+    this.#onDispose = onDispose ?? null
+  }
+
+  /**
+   * The theme URI this panel is associated with.
+   *
+   * @returns {Uri}
+   */
+  get themeUri() {
+    return this.#themeUri
+  }
+
+  /**
+   * Updates the panel title.
+   *
+   * @param {string} title - The new title.
+   */
+  setTitle(title) {
+    this.#title = title
+
+    if(this.#panel)
+      this.#panel.title = title
   }
 
   /**
@@ -90,6 +124,9 @@ export default class SassyPanel {
    */
   dispose() {
     this.#panel = null
+
+    if(this.#onDispose)
+      this.#onDispose()
   }
 
   async #createPanel() {
@@ -99,7 +136,7 @@ export default class SassyPanel {
 
       this.#panel = window.createWebviewPanel(
         SassyPanel.viewType,
-        "Sassy",
+        this.#title,
         ViewColumn.Beside,
         {
           enableScripts: true,

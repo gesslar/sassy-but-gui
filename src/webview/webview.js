@@ -1,10 +1,8 @@
 const vscode = acquireVsCodeApi()
-const {setState, getState} = vscode
 
 class WebSassy {
   // debugger
   #elements = {}
-  #activeTab = "dashboard"
   #diagnostics = []
 
   constructor() {
@@ -14,13 +12,8 @@ class WebSassy {
         this.#elements[toCamelCase(e.id)] = e
       })
 
-    // Dashboard actions
     this.#elements.btnBuild.addEventListener("click", () =>
       vscode.postMessage({type: "requestBuild"})
-    )
-
-    this.#elements.btnLint.addEventListener("click", () =>
-      vscode.postMessage({type: "requestLint"})
     )
 
     this.#elements.switchAutobuild.addEventListener("change", evt =>
@@ -34,14 +27,14 @@ class WebSassy {
     this.#elements.filterInfo.addEventListener("change", () => this.#applyDiagFilter())
 
     // Diagnostics list click
-    this.#elements.diagList.addEventListener("click", evt => {
-      const item = evt.target.closest(".diag-item")
+    // this.#elements.diagList.addEventListener("click", evt => {
+    //   const item = evt.target.closest(".diag-item")
 
-      if(!item?.dataset.location)
-        return
+    //   if(!item?.dataset.location)
+    //     return
 
-      vscode.postMessage({type: "jumpToLocation", location: item.dataset.location})
-    })
+    //   vscode.postMessage({type: "jumpToLocation", location: item.dataset.location})
+    // })
 
     // Resolve
     this.#elements.btnResolve.addEventListener("click", () => this.#doResolve())
@@ -55,10 +48,6 @@ class WebSassy {
 
     // Signal ready
     vscode.postMessage({type: "ready"})
-  }
-
-  #save(ob) {
-    setState({...getState(), ...ob})
   }
 
   #onMessage(event) {
@@ -80,9 +69,6 @@ class WebSassy {
       case "paletteData":
         this.#showPalette(message.data)
         break
-      case "buildStatus":
-        this.#updateBuildStatus(message.data)
-        break
       case "error":
         this.#showError(message.message)
         break
@@ -91,94 +77,185 @@ class WebSassy {
 
   #updateThemeData(data) {
     if(!data) {
-      this.#elements.noTheme.hidden = false
       this.#elements.themeInfo.hidden = true
 
       return
     }
 
-    this.#elements.noTheme.hidden = true
     this.#elements.themeInfo.hidden = false
 
-    this.#elements.themeName.textContent = data.name || "Unnamed Theme"
-    this.#elements.themePath.textContent = data.path || ""
+    this.#elements.themePath.textContent = data.relativePath || ""
     this.#elements.switchAutobuild.selected = !!data.autoBuild
   }
 
   #updateDiagnostics(data) {
-    debugger
+    // debugger
 
     if(!data)
       return
 
     this.#diagnostics = []
+
     const container = this.#elements.diagList
+    container.textContent = ""
 
-    container.innerHTML = ""
-
-    const categories = ["variables", "tokenColors", "semanticTokenColors", "colors"]
+    const categories = ["variables", "colors", "tokenColors", "semanticTokenColors"]
 
     for(const category of categories) {
       const items = data[category]
+      const group = document.createElement("vscode-tree-item")
+      group.setAttribute("open", true)
+      const groupName = document.createElement("div")
+      groupName.textContent = category.toLocaleUpperCase()
+      group.appendChild(groupName)
+
+      if(items.length > 0) {
+        const groupCount = document.createElement("vscode-badge")
+        groupCount.variant = "counter"
+        groupCount.textContent = items.length
+        group.appendChild(groupCount)
+      }
 
       if(!items?.length)
         continue
 
-      // Category header
-      const header = document.createElement("div")
-
-      header.className = "diag-group-header"
-      header.textContent = category
-      container.appendChild(header)
-
-      const template = document.getElementById("diag-item-template")
-
       for(const issue of items) {
-        const clone = template.content.cloneNode(true)
-        const el = clone.querySelector(".diag-item")
         const severity = this.#mapSeverity(issue.severity)
 
-        el.classList.add(`severity-${severity}`)
+        // if(issue.location)
+        //   el.dataset.location = issue.location
+
+        const item = document.createElement("vscode-tree-item")
 
         if(issue.location)
-          el.dataset.location = issue.location
+          item.dataset.location = issue.location
 
-        const icon = el.querySelector(".diag-icon")
+        const message = document.createElement("div")
+        message.className = "diag-card"
 
-        icon.classList.add(`codicon-${severity}`)
+        const actions = document.createElement("div")
+        actions.className = `diag-card-icon ${severity}`
+        const itemIcon = document.createElement("vscode-icon")
+        itemIcon.setAttribute("name", severity)
+        actions.appendChild(itemIcon)
+        message.appendChild(actions)
 
-        const msg = el.querySelector(".diag-message")
+        const details = document.createElement("div")
+        details.className = "diag-card-details"
 
-        msg.textContent = issue.message
+        const msgLine = document.createElement("div")
+        msgLine.className = "diag-card-message"
+        msgLine.textContent = issue.message
           || `${issue.type}: ${issue.variable || issue.scope || issue.selector || ""}`
+        details.appendChild(msgLine)
 
-        const badge = el.querySelector(".diag-category")
+        // Category-specific enrichment
+        const meta = document.createElement("div")
+        meta.className = "diag-card-meta"
 
-        badge.textContent = category
+        if(category === "colors") {
+          if(issue.property) {
+            const prop = document.createElement("span")
+            prop.className = "diag-card-tag"
+            prop.textContent = issue.property
+            meta.appendChild(prop)
+          }
 
-        const loc = el.querySelector(".diag-location")
+          if(issue.value && isHexColor(issue.value)) {
+            const swatch = document.createElement("span")
+            swatch.className = "diag-card-swatch"
+            swatch.style.backgroundColor = issue.value
+            meta.appendChild(swatch)
 
-        loc.textContent = issue.location || ""
+            const val = document.createElement("span")
+            val.className = "diag-card-value"
+            val.textContent = issue.value
+            meta.appendChild(val)
+          }
 
-        this.#diagnostics.push({issue, el, severity, category})
-        container.appendChild(el)
+          if(issue.description) {
+            const desc = document.createElement("div")
+            desc.className = "diag-card-description"
+            desc.textContent = issue.description
+            details.appendChild(desc)
+          }
+        } else if(category === "variables") {
+          if(issue.variable) {
+            const varTag = document.createElement("span")
+            varTag.className = "diag-card-tag variable"
+            varTag.textContent = issue.variable
+            meta.appendChild(varTag)
+          }
+
+          if(issue.occurrence) {
+            // const file = document.createElement("span")
+            // file.className = "diag-card-value"
+            // file.textContent = issue.occurrence
+            // meta.appendChild(file)
+          }
+        } else if(category === "tokenColors") {
+          if(issue.scope) {
+            const scopeTag = document.createElement("span")
+            scopeTag.className = "diag-card-tag"
+            scopeTag.textContent = issue.scope
+            meta.appendChild(scopeTag)
+          }
+
+          if(issue.rule) {
+            const ruleTag = document.createElement("span")
+            ruleTag.className = "diag-card-value"
+            ruleTag.textContent = issue.rule
+            meta.appendChild(ruleTag)
+          }
+
+          if(issue.broadScope && issue.specificScope) {
+            const precDiv = document.createElement("div")
+            precDiv.className = "diag-card-precedence"
+            precDiv.innerHTML =
+              `<span class="diag-card-tag">${issue.broadScope}</span>`
+              + ` masks <span class="diag-card-tag">${issue.specificScope}</span>`
+            details.appendChild(precDiv)
+          }
+        } else if(category === "semanticTokenColors") {
+          if(issue.selector) {
+            const selTag = document.createElement("span")
+            selTag.className = "diag-card-tag"
+            selTag.textContent = issue.selector
+            meta.appendChild(selTag)
+          }
+
+          if(issue.property) {
+            const propTag = document.createElement("span")
+            propTag.className = "diag-card-value"
+            propTag.textContent = issue.property
+            meta.appendChild(propTag)
+          }
+        }
+
+        if(meta.childNodes.length > 0)
+          details.appendChild(meta)
+
+        if(issue.location) {
+          const locLine = document.createElement("div")
+          locLine.className = "diag-card-location"
+          locLine.textContent = issue.location
+          details.appendChild(locLine)
+        }
+
+        message.appendChild(details)
+        item.appendChild(message)
+        group.appendChild(item)
+
+        this.#diagnostics.push({el: item, severity, issue})
       }
+
+      container.appendChild(group)
     }
 
     const hasDiags = this.#diagnostics.length > 0
 
     this.#elements.diagEmpty.hidden = hasDiags
     this.#applyDiagFilter()
-  }
-
-  #mapSeverity(severity) {
-    if(severity === "high")
-      return "error"
-
-    if(severity === "medium")
-      return "warning"
-
-    return "info"
   }
 
   #applyDiagFilter() {
@@ -318,6 +395,16 @@ class WebSassy {
     this.#appendGroup(grid, template, data.colors)
   }
 
+  #mapSeverity(severity) {
+    if(severity === "high")
+      return "error"
+
+    if(severity === "medium")
+      return "warning"
+
+    return "info"
+  }
+
   #appendGroup(grid, template, entries, prefix = "") {
     const isLeaf = v => typeof v?.raw === "string" && typeof v?.value === "string"
 
@@ -352,18 +439,6 @@ class WebSassy {
     header.className = "palette-section-header"
     header.textContent = name
     grid.appendChild(header)
-  }
-
-  #updateBuildStatus(data) {
-    const el = this.#elements.buildStatus
-
-    el.hidden = false
-    el.className = `status-card ${data.success ? "success" : "error"}`
-
-    el.querySelector(".status-icon").className =
-      `codicon status-icon codicon-${data.success ? "check" : "error"}`
-
-    this.#elements.buildStatusText.textContent = data.message || "Done"
   }
 
   #showError(message) {

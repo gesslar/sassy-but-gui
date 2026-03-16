@@ -2,7 +2,6 @@ import {Lint, Resolve, Theme} from "@gesslar/sassy"
 import {Cache, Data, FileObject, FileSystem as FS, Glog} from "@gesslar/toolkit"
 import * as vscode from "vscode"
 
-import {Sass} from "@gesslar/toolkit/browser"
 import EventService from "./EventService.js"
 import SassyPanel from "./SassyPanel.js"
 import {Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
@@ -12,12 +11,14 @@ const {Range, Selection, TabInputText, Uri, ViewColumn} = vscode
 const {Position, TextEditorRevealType} = vscode
 
 class Sassy {
+  /** @type {vscode.ExtensionContext} */
+  #context
   /** @type {Glog} */
   #glog
   /** @type {EventService} */
   #eventProvider
-  /** @type {SassyPanel} */
-  #panel
+  /** @type {Map<string, SassyPanel>} */
+  #panels = new Map()
   /** @type {Map<string, {watcher: vscode.FileSystemWatcher, themes: Set<string>}>} */
   #watchers = new Map()
   /** @type {Map<string, Theme>} */
@@ -37,6 +38,7 @@ class Sassy {
    * @param {vscode.ExtensionContext} context - The extension context.
    */
   async activate(context) {
+    this.#context = context
     this.#glog = new Glog({
       displayName: false,
       name: "Sassy",
@@ -47,22 +49,18 @@ class Sassy {
     this.#schema = await VSCodeSchema.new()
     this.#eventProvider = new EventService({glog: this.#glog})
 
-    this.#panel = new SassyPanel(
-      context, this.#glog, msg => this.#handleWebviewMessage(msg)
-    )
-
     context.subscriptions.push(
       commands.registerCommand("sassy.showPanel",
-        () => this.#panel.show()
+        uri => this.#showPanel(uri)
       ),
       commands.registerCommand("sassy.buildTheme",
         uri => this.#buildThemeToDisk(uri)
       ),
       commands.registerCommand("sassy.enableAutoBuild",
-        () => this.#setAutoBuild(true)
+        () => this.#setAutoBuild(window.activeTextEditor?.document.uri, true)
       ),
       commands.registerCommand("sassy.disableAutoBuild",
-        () => this.#setAutoBuild(false)
+        () => this.#setAutoBuild(window.activeTextEditor?.document.uri, false)
       ),
 
       workspace.onDidOpenTextDocument(
@@ -76,13 +74,6 @@ class Sassy {
       ),
     )
 
-    // Register webview panel serializer for persistence
-    window.registerWebviewPanelSerializer(SassyPanel.viewType, {
-      deserializeWebviewPanel: async panel => {
-        await this.#panel.restore(panel)
-      }
-    })
-
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#lint(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#autoBuildToDisk(ctx))
@@ -90,6 +81,54 @@ class Sassy {
     this.#eventProvider.on("theme.built", ctx => this.#sendPaletteData(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#sendProof(ctx))
     this.#eventProvider.on("theme.linted", ctx => this.#sendDiagnostics(ctx))
+  }
+
+  /**
+   * Shows a panel for the given theme URI, creating one if needed.
+   *
+   * @param {Uri} [explorerUri] - The theme URI from explorer context menu.
+   */
+  async #showPanel(explorerUri) {
+    const uri = explorerUri ?? window.activeTextEditor?.document.uri
+
+    if(!uri || !this.#isSassyDefinitionFile(uri))
+      return
+
+    const existing = this.#panels.get(uri.fsPath)
+
+    if(existing) {
+      await existing.show()
+
+      return
+    }
+
+    const theme = await this.#ensureTheme(uri)
+
+    if(!theme)
+      return
+
+    const title = theme.getName() ?? "Sassy"
+    const panel = new SassyPanel({
+      context: this.#context,
+      glog: this.#glog,
+      messageHandler: msg => this.#handleWebviewMessage(uri, msg),
+      title,
+      themeUri: uri,
+      onDispose: () => this.#panels.delete(uri.fsPath),
+    })
+
+    this.#panels.set(uri.fsPath, panel)
+    await panel.show()
+  }
+
+  /**
+   * Gets the panel associated with a theme URI.
+   *
+   * @param {Uri} uri - The theme URI.
+   * @returns {SassyPanel|undefined}
+   */
+  #getPanelForTheme(uri) {
+    return this.#panels.get(uri.fsPath)
   }
 
   /**
@@ -121,19 +160,17 @@ class Sassy {
    */
   async #lint(uri) {
     try {
-      const theme = this.#themeMap.get(uri.fsPath)
+      const theme = await this.#ensureTheme(uri)
 
       if(!theme)
         return
 
-      if(!theme.canBuild())
-        return
-
       const lint = await new Lint().run(theme)
-      lint.colors = await Validator.validate(
+      lint.colors = (await Validator.validate(
         this.#schema.map,
         theme.getOutput()?.colors
-      )
+      ))
+        .filter(e => e.status !== "valid")
 
       this.#eventProvider.emit("theme.linted", {uri, lint})
     } catch(error) {
@@ -148,24 +185,26 @@ class Sassy {
    */
   async #sendThemeData(uri) {
     try {
-    /** @type {Theme} */
-      const theme = this.#themeMap.get(uri.fsPath)
+      const theme = await this.#ensureTheme(uri)
 
       if(!theme)
         return
 
-      if(!theme.isCompiled())
-        throw Sassy.new("Theme has not been built yet.")
+      const panel = this.#getPanelForTheme(uri)
 
-      this.#panel.postMessage({
-        type: "themeData",
-        data: {
-          name: theme.getName(),
-          path: uri.fsPath,
-          proof: theme.getProof(),
-          autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
-        }
-      })
+      if(panel) {
+        panel.setTitle(theme.getName())
+        panel.postMessage({
+          type: "themeData",
+          data: {
+            name: theme.getName(),
+            path: uri.fsPath,
+            relativePath: workspace.asRelativePath(uri),
+            proof: theme.getProof(),
+            autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
+          }
+        })
+      }
     } catch(error) {
       this.#glog.error(error, error.stack)
     }
@@ -183,7 +222,7 @@ class Sassy {
       if(!theme)
         return
 
-      this.#panel.postMessage({
+      this.#getPanelForTheme(uri)?.postMessage({
         type: "diagnostics",
         data: {
           themeName: theme.getName(),
@@ -236,13 +275,10 @@ class Sassy {
    */
   async #sendPaletteData(uri) {
     try {
-      const theme = this.#themeMap.get(uri.fsPath)
+      const theme = await this.#ensureTheme(uri)
 
       if(!theme)
         return
-
-      if(!theme.isCompiled())
-        throw Sass.new("Theme has not been built yet.")
 
       const pool = theme.getPool()
       const tokens = pool.getTokens().entries().filter(([name, _]) => name.startsWith("palette.") && !name.includes("__prior__"))
@@ -253,7 +289,7 @@ class Sassy {
         Data.setNestedValue(resolvedPalette, key.split("."), {raw: token.getRawValue(), value: token.getValue()})
       }
 
-      this.#panel.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
+      this.#getPanelForTheme(uri)?.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
     } catch(error) {
       this.#glog.error(error)
     }
@@ -262,36 +298,28 @@ class Sassy {
   /**
    * Handles messages from the webview.
    *
+   * @param {Uri} themeUri - The theme URI this panel is bound to.
    * @param {object} message - The message from the webview.
    */
-  async #handleWebviewMessage(message) {
+  async #handleWebviewMessage(themeUri, message) {
     switch(message.type) {
       case "ready":
-        await this.#sendCurrentState()
+        await this.#sendCurrentState(themeUri)
         break
       case "requestBuild":
-        await this.#buildThemeToDisk()
+        await this.#buildThemeToDisk(themeUri)
         break
-      case "requestLint": {
-        const uri = this.#getActiveThemeUri()
-
-        if(uri)
-          await this.#lint(uri)
-
-        break
-      }
-
       case "requestResolve":
-        await this.#resolveForWebview(message)
+        await this.#resolveForWebview(themeUri, message)
         break
       case "requestProof":
-        await this.#sendProof()
+        await this.#sendProof(themeUri)
         break
       case "jumpToLocation":
         await this.#gotoLocation(message.location)
         break
       case "toggleAutoBuild":
-        this.#setAutoBuild(message.enabled)
+        this.#setAutoBuild(themeUri, message.enabled)
         break
       case "log":
         this.#glog.info(`[webview]: ${message.msg}`)
@@ -301,13 +329,10 @@ class Sassy {
 
   /**
    * Sends current state to the webview on ready.
+   *
+   * @param {Uri} uri - The theme URI.
    */
-  async #sendCurrentState() {
-    const uri = this.#getActiveThemeUri()
-
-    if(!uri)
-      return
-
+  async #sendCurrentState(uri) {
     const theme = this.#themeMap.get(uri.fsPath)
 
     if(!theme)
@@ -318,39 +343,19 @@ class Sassy {
   }
 
   /**
-   * Gets the URI of the currently active sassy theme.
-   *
-   * @returns {Uri|null}
-   */
-  #getActiveThemeUri() {
-    const uri = window.activeTextEditor?.document.uri
-
-    if(uri && this.#isSassyDefinitionFile(uri))
-      return uri
-
-    // Fallback to first loaded theme
-    const first = this.#themeMap.keys().next().value
-
-    return first ? Uri.file(first) : null
-  }
-
-  /**
    * Resolves a color/token/semantic and sends the result to the webview.
    *
-   * @param {object} param0 - The resolve request.
+   * @param {Uri} uri - The theme URI.
+   * @param {object} param1 - The resolve request.
    */
-  async #resolveForWebview({resolveType, key}) {
+  async #resolveForWebview(uri, {resolveType, key}) {
     try {
-      const uri = this.#getActiveThemeUri()
-
-      if(!uri)
-        return
-
-      const theme = this.#themeMap.get(uri.fsPath)
+      const theme = await this.#ensureTheme(uri)
 
       if(!theme)
         return
 
+      const panel = this.#getPanelForTheme(uri)
       const resolver = new Resolve()
       let data
 
@@ -361,38 +366,35 @@ class Sassy {
       else if(resolveType === "semanticTokenColor")
         data = await resolver.semanticTokenColor(theme, key)
 
-      this.#panel.postMessage({
+      panel?.postMessage({
         type: "resolveResult",
         data: {...data, key, resolveType}
       })
     } catch(error) {
       this.#glog.error(error)
-      this.#panel.postMessage({type: "error", message: error.message})
+      this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
 
   /**
    * Generates and sends the proof (composed YAML) to the webview.
+   *
+   * @param {Uri} uri - The theme URI.
    */
-  async #sendProof() {
+  async #sendProof(uri) {
     try {
-      const uri = this.#getActiveThemeUri()
-
-      if(!uri)
-        return
-
-      const theme = this.#themeMap.get(uri.fsPath)
+      const theme = await this.#ensureTheme(uri)
 
       if(!theme)
         return
 
-      this.#panel.postMessage({
+      this.#getPanelForTheme(uri)?.postMessage({
         type: "proofResult",
         data: {yaml: theme.getProof()}
       })
     } catch(error) {
       this.#glog.error(error)
-      this.#panel.postMessage({type: "error", message: error.message})
+      this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
 
@@ -513,13 +515,7 @@ class Sassy {
       if(!this.#isSassyDefinitionFile(document.uri))
         return
 
-      const theme =
-        this.#themeMap.get(document.uri.fsPath)
-        ?? await this.#loadTheme(document.uri)
-
-      if(!this.#themeMap.has(document.uri.fsPath))
-        this.#themeMap.set(document.uri.fsPath, theme)
-
+      await this.#ensureTheme(document.uri)
       this.#eventProvider.asyncEmit("file.loaded", document.uri)
     } catch(error) {
       this.#glog.error(error)
@@ -548,17 +544,10 @@ class Sassy {
       if(!themeUri || !this.#isSassyDefinitionFile(themeUri))
         return
 
-      let theme = this.#themeMap.get(themeUri.fsPath)
+      const theme = await this.#ensureTheme(themeUri)
 
-      if(!theme) {
-        theme = await this.#loadTheme(themeUri)
-
-        if(!theme)
-          return
-
-        this.#themeMap.set(themeUri.fsPath, theme)
-        await theme.build()
-      }
+      if(!theme)
+        return
 
       const output = theme.getOutput()
 
@@ -583,22 +572,22 @@ class Sassy {
 
       await workspace.fs.writeFile(outputUri, encoded)
 
-      this.#panel.postMessage({
+      this.#getPanelForTheme(themeUri)?.postMessage({
         type: "buildStatus",
         data: {success: true, message: `Built to ${outputFile}`}
       })
     } catch(error) {
+      const uri = explorerUri ?? window.activeTextEditor?.document.uri
+
       this.#glog.error(`Failed to build theme: ${error.message}`)
-      this.#panel.postMessage({
+      this.#getPanelForTheme(uri)?.postMessage({
         type: "buildStatus",
         data: {success: false, message: error.message}
       })
     }
   }
 
-  #setAutoBuild(enabled) {
-    const uri = window.activeTextEditor?.document.uri
-
+  #setAutoBuild(uri, enabled) {
     if(!uri || !this.#isSassyDefinitionFile(uri))
       return
 
@@ -629,6 +618,30 @@ class Sassy {
     await this.#buildThemeToDisk(uri)
   }
 
+  /**
+   * Ensures a theme is loaded and built for the given URI.
+   *
+   * @param {Uri} uri - The theme file URI.
+   * @returns {Promise<Theme|undefined>}
+   */
+  async #ensureTheme(uri) {
+    let theme = this.#themeMap.get(uri.fsPath)
+
+    if(!theme) {
+      theme = await this.#loadTheme(uri)
+
+      if(!theme)
+        return
+
+      this.#themeMap.set(uri.fsPath, theme)
+    }
+
+    if(!theme.isCompiled())
+      await theme.build()
+
+    return theme
+  }
+
   #isSassyDefinitionFile(uri) {
     return this.#sassyFileExtensionRegex.test(uri.fsPath)
   }
@@ -656,6 +669,8 @@ class Sassy {
 
   async deactivate() {
     this.#watchers.forEach(v => v.watcher.dispose())
+    this.#panels.forEach(p => p.dispose())
+    this.#panels.clear()
   }
 }
 

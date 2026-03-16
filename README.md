@@ -12,5 +12,7 @@ licenses:
 | --- | --- |
 | [@gesslar/sassy](https://github.com/gesslar/sassy) | Unlicense |
 | [@gesslar/toolkit](https://github.com/gesslar/toolkit) | Unlicense |
+| [@gesslar/vscode-theme-schema](https://github.com/gesslar/vscode-theme-schema) | Unlicense |
+| [@vscode-elements/elements](https://github.com/vscode-elements/elements) | MIT |
 | [@vscode/codicons](https://github.com/microsoft/vscode-codicons) | CC-BY-4.0 |
 | [@vscode/vsce](https://github.com/Microsoft/vsce) | MIT |
