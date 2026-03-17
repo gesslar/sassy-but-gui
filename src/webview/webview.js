@@ -26,6 +26,8 @@ class WebSassy {
     this.#elements.filterWarnings.addEventListener("change", () => this.#applyDiagFilter())
     this.#elements.filterInfo.addEventListener("change", () => this.#applyDiagFilter())
 
+    // Click things
+
     // Diagnostics list click
     // this.#elements.diagList.addEventListener("click", evt => {
     //   const item = evt.target.closest(".diag-item")
