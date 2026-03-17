@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@gesslar/sassy": "^5.14.0",
-    "@gesslar/toolkit": "^4.3.0",
+    "@gesslar/toolkit": "^4.4.0",
     "@gesslar/vscode-theme-schema": "^1.0.0",
     "@vscode-elements/elements": "^2.5.1",
     "@vscode/codicons": "^0.0.45",

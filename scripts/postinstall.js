@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const src = join(root, "node_modules", "@gesslar", "toolkit", "vendor", "toolkit.esm.js")
-const dest = join(root, "src", "vendor", "toolkit.esm.js")
+const dest = join(root, "src", "webview", "vendor", "toolkit.esm.js")
 
 await mkdir(dirname(dest), {recursive: true})
 await copyFile(src, dest)
