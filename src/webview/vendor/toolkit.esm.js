@@ -1,4 +1,4 @@
-// @gesslar/toolkit v4.3.0 - ES module bundle
+// @gesslar/toolkit v4.4.0 - ES module bundle
 /**
  * @file Tantrum.js
  *
@@ -4170,29 +4170,45 @@ class Time {
    * The returned promise includes a timerId property that can be used with cancel().
    *
    * @param {number} delay - Delay in milliseconds before resolving (must be >= 0)
-   * @param {unknown} [value] - Optional value to resolve with after the delay
-   * @returns {Promise<unknown> & {timerId: number}} Promise that resolves with the value after delay, extended with timerId property
+   * @param {unknown} [value] - Optional value to resolve with, or a function to invoke after the delay
+   * @returns {Promise<unknown> & {timerId: number}} Promise that resolves with the value (or function result) after delay, extended with timerId property
    * @throws {Sass} If delay is not a number or is negative
    * @example
    * // Wait 1 second then continue
    * await Time.after(1000)
    *
-   * // Wait 1 second then get a value
-   * const result = await Time.after(1000, 'done')
+   * // Debounce: only apply the latest input after the user stops typing
+   * let pending = null
+   * function onInput(text) {
+   *   Time.cancel(pending) // cancel() is a no-op if not a valid Time promise.
+   *   pending = Time.after(300, () => applySearch(text))
+   * }
    *
-   * // Create a cancellable delay
-   * const promise = Time.after(5000, 'data')
-   * Time.cancel(promise) // Cancel before it resolves
+   * // Timeout a fetch request
+   * const result = await Promise.race([
+   *   fetch("/api/data"),
+   *   Time.after(5000, () => { throw new Error("Request timed out") })
+   * ])
+   *
+   * // Cancellable delay
+   * const promise = Time.after(5000, "data")
+   * Time.cancel(promise) // Prevents resolution
    */
   static after(delay, value) {
     Valid.type(delay, "Number", "delay");
     Valid.assert(delay >= 0, "delay must be non-negative", delay);
 
     let timerId;
-    const promise = new Promise(resolve => {
+    const promise = new Promise((resolve, reject) => {
       // Cap at max 32-bit signed integer to avoid Node.js timeout overflow warning
       const safeDelay = Math.min(delay, 2147483647);
-      timerId = setTimeout(() => resolve(value), safeDelay);
+      timerId = setTimeout(() => {
+        try {
+          resolve(Data.isType(value, "Function") ? value() : value);
+        } catch(e) {
+          reject(e);
+        }
+      }, safeDelay);
     });
     promise.timerId = timerId;
 

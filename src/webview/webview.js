@@ -1,6 +1,8 @@
 import * as TK from "./vendor/toolkit.esm.js"
 
 const vscode = acquireVsCodeApi()
+
+const {postMessage} = vscode
 const {Notify} = TK
 
 class WebSassy {
@@ -10,24 +12,35 @@ class WebSassy {
 
   constructor() {
     // Register all elements with IDs
-    document.querySelectorAll("*[id]").forEach(e => this.#elements[toCamelCase(e.id)] = e)
-
-    this.#elements.btnBuild.addEventListener("click", () =>
-      vscode.postMessage({type: "requestBuild"})
-    )
-
-    this.#elements.switchAutobuild.addEventListener("change", evt =>
-      vscode.postMessage({type: "toggleAutoBuild", enabled: evt.target.checked})
-    )
+    document
+      .querySelectorAll("*[id]")
+      .forEach(e => this.#elements[toCamelCase(e.id)] = e)
 
     // Diagnostics filter
-    this.#elements.diagFilter.addEventListener("input", () => this.#applyDiagFilter())
-    this.#elements.filterErrors.addEventListener("change", () => this.#applyDiagFilter())
-    this.#elements.filterWarnings.addEventListener("change", () => this.#applyDiagFilter())
-    this.#elements.filterInfo.addEventListener("change", () => this.#applyDiagFilter())
+    const {
+      diagFilter,
+      filterErrors,
+      filterWarnings,
+      filterInfo,
+      btnResolve,
+      resolveKey
+    } = this.#elements
 
-    // Click things
-    Notify.on("click", () => vscode.postMessage({type: "requestBuild"}), this.#elements.btnBuild)
+    Notify.on("input", () => this.#applyDiagFilter(), diagFilter)
+    Notify.on("change", () => this.#applyDiagFilter(), filterErrors)
+    Notify.on("input", () => this.#applyDiagFilter(), filterWarnings)
+    Notify.on("input", () => this.#applyDiagFilter(), filterInfo)
+    Notify.on("click", () => this.#doResolve(), btnResolve)
+    Notify.on("keydown", evt => evt.key === "ENter" && this.#doResolve(), resolveKey)
+
+    // Building things
+    const {
+      switchAutobuild,
+      btnBuild
+    } = this.#elements
+
+    Notify.on("change", evt => postMessage({type: "toggleAutoBuild", enabled: evt.target.checked}), switchAutobuild)
+    Notify.on("click", () => postMessage({type: "requestBuild"}), btnBuild)
 
     // Diagnostics list click
     // this.#elements.diagList.addEventListener("click", evt => {
@@ -39,18 +52,11 @@ class WebSassy {
     //   vscode.postMessage({type: "jumpToLocation", location: item.dataset.location})
     // })
 
-    // Resolve
-    this.#elements.btnResolve.addEventListener("click", () => this.#doResolve())
-    this.#elements.resolveKey.addEventListener("keydown", evt => {
-      if(evt.key === "Enter")
-        this.#doResolve()
-    })
-
     // Messages from extension
-    window.addEventListener("message", evt => this.#onMessage(evt))
+    Notify.on("message", evt => this.#onMessage(evt))
 
     // Signal ready
-    vscode.postMessage({type: "ready"})
+    postMessage({type: "ready"})
   }
 
   #onMessage(event) {
@@ -92,19 +98,45 @@ class WebSassy {
       )
   }
 
-  #aborter
+  #debounced = null
+  #dirtyDebouncer(dirty) {
+    TK.Time.cancel(this.#debounced)
 
-  #setDirty(status) {
+    // Don't debounce if we get a not dirty. idk if this is a good idea,
+    // but I think it is. at this time. maybe. we'll see.
+    if(dirty === false) {
+      this.#setDirty(dirty, true)
+
+      return
+    }
+
+    this.#debounced = TK.Time.after(
+      1_000,
+      () => {
+        console.info("Hi there!")
+        this.#setDirty(dirty, true)
+      }
+    )
+  }
+
+  #aborter
+  #setDirty(status, debounced=false) {
     this.#aborter?.abort()
+
+    console.info("#setDirty", status, debounced)
+
+    if(!debounced) {
+      this.#dirtyDebouncer(status)
+
+      return
+    }
 
     if(status) {
       this.#aborter = new AbortController()
       const els = document.querySelectorAll(".dirty-theme")
 
       els.forEach(e => {
-        if(e.classList.contains("dirty"))
-          e.classList.remove("dirty")
-
+        e.classList.contains("dirty") && e.classList.remove("dirty")
         e.classList.add("dirty")
         e.addEventListener(
           "transitionend",
