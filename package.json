@@ -34,7 +34,8 @@
     "publish:ovsx": "npm run package && xdg-open https://open-vsx.org/user-settings/extensions",
     "patch": "npm version patch",
     "minor": "npm version minor",
-    "major": "npm version major"
+    "major": "npm version major",
+    "postinstall": "node scripts/postinstall.js"
   },
   "engines": {
     "vscode": "^1.94.0"
