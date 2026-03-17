@@ -65,15 +65,15 @@ class Sassy {
         () => this.#setAutoBuild(window.activeTextEditor?.document.uri, false)
       ),
 
-      workspace.onDidOpenTextDocument(
-        async ctx => await this.#documentOpened(ctx)
-      ),
-      workspace.onDidCloseTextDocument(
-        async ctx => await this.#documentClosed(ctx)
-      ),
-      window.onDidChangeActiveTextEditor(
-        () => this.#updateAutoBuildContext()
-      ),
+      // workspace.onDidOpenTextDocument(
+      //   async ctx => await this.#documentOpened(ctx)
+      // ),
+      // workspace.onDidCloseTextDocument(
+      //   async ctx => await this.#documentClosed(ctx)
+      // ),
+      // window.onDidChangeActiveTextEditor(
+      //   () => this.#updateAutoBuildContext()
+      // ),
     )
 
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
@@ -152,12 +152,11 @@ class Sassy {
         return
 
       await theme.build()
-      this.#dirtyThemes.add(uri.fsPath)
 
-      this.#eventProvider.asyncEmit("theme.built", uri)
+      this.#dirtyThemes.add(uri.fsPath)
+      this.#eventProvider.fire("theme.built", uri, this.#glog.error)
     } catch(error) {
       this.#glog.error(error)
-      // this.#panel.postMessage({type: "error", message: error.message})
     }
   }
 
@@ -349,7 +348,7 @@ class Sassy {
       return
 
     await this.#sendThemeData(uri)
-    this.#eventProvider.asyncEmit("file.loaded", uri)
+    this.#eventProvider.fire("file.loaded", uri, this.#glog.error)
   }
 
   /**
@@ -466,7 +465,7 @@ class Sassy {
           return
 
         for(const tp of entry.themes)
-          this.#eventProvider.asyncEmit("file.loaded", Uri.file(tp))
+          this.#eventProvider.fire("file.loaded", Uri.file(tp), this.#glog.error)
       })
 
       this.#watchers.set(depPath, {watcher, themes: new Set([themePath])})
@@ -526,9 +525,10 @@ class Sassy {
         return
 
       await this.#ensureTheme(document.uri)
+
       this.#autoBuildThemes.add(document.uri.fsPath)
       this.#updateAutoBuildContext()
-      this.#eventProvider.asyncEmit("file.loaded", document.uri)
+      this.#eventProvider.fire("file.loaded", document.uri, this.#glog.error)
     } catch(error) {
       this.#glog.error(error)
     }
@@ -574,8 +574,6 @@ class Sassy {
       const message = result.status === WriteStatus.SKIPPED
         ? `No changes to write`
         : `Built to ${result.file.path}`
-
-      this.#glog.info("Posting message about a build status.")
 
       this.#getPanelForTheme(themeUri)?.postMessage({
         type: "buildStatus",
