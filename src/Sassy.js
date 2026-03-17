@@ -25,8 +25,6 @@ class Sassy {
   #themeMap = new Map()
   /** @type {Set<string>} */
   #autoBuildThemes = new Set()
-  /** @type {Set<string>} */
-  #dirtyThemes = new Set()
   /** @type {Cache} */
   #cache = new Cache()
   #schema
@@ -78,11 +76,13 @@ class Sassy {
 
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#lint(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#autoBuildToDisk(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#sendThemeData(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#sendPaletteData(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#sendProof(ctx))
-    this.#eventProvider.on("theme.linted", ctx => this.#sendDiagnostics(ctx))
+    this.#eventProvider.on("theme.linted", ctx => {
+      this.#autoBuildToDisk(ctx.uri)  // build if necessary
+      this.#sendThemeData(ctx.uri)    // send the theme data
+      this.#sendDiagnostics(ctx)  // send the diags
+    })
   }
 
   /**
@@ -152,11 +152,9 @@ class Sassy {
         return
 
       await theme.build()
-
-      this.#dirtyThemes.add(uri.fsPath)
       this.#eventProvider.fire("theme.built", uri, this.#glog.error)
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
     }
   }
 
@@ -200,6 +198,8 @@ class Sassy {
       const panel = this.#getPanelForTheme(uri)
 
       if(panel) {
+        const dirty = theme.canWrite() && await theme.wouldWrite()
+
         panel.setTitle(theme.getName())
         panel.postMessage({
           type: "themeData",
@@ -209,7 +209,7 @@ class Sassy {
             relativePath: workspace.asRelativePath(uri),
             proof: theme.getProof(),
             autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
-            dirty: this.#dirtyThemes.has(uri.fsPath),
+            dirty,
           }
         })
       }
@@ -223,18 +223,20 @@ class Sassy {
    *
    * @param {object} ctx - The context with uri and lint results.
    */
-  #sendDiagnostics({uri, lint}) {
+  async #sendDiagnostics({uri, lint}) {
     try {
       const theme = this.#themeMap.get(uri.fsPath)
 
       if(!theme)
         return
 
+      const dirty = theme.canWrite() && await theme.wouldWrite()
+
       this.#getPanelForTheme(uri)?.postMessage({
         type: "diagnostics",
         data: {
           themeName: theme.getName(),
-          dirty: this.#dirtyThemes.has(uri.fsPath),
+          dirty,
           variables: lint.variables ?? [],
           tokenColors: this.#flattenTokenColorIssues(lint.tokenColors ?? []),
           semanticTokenColors: lint.semanticTokenColors ?? [],
@@ -300,7 +302,7 @@ class Sassy {
 
       this.#getPanelForTheme(uri)?.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
     }
   }
 
@@ -380,7 +382,7 @@ class Sassy {
         data: {...data, key, resolveType}
       })
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
       this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
@@ -402,7 +404,7 @@ class Sassy {
         data: {yaml: theme.getProof()}
       })
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
       this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
@@ -530,7 +532,7 @@ class Sassy {
       this.#updateAutoBuildContext()
       this.#eventProvider.fire("file.loaded", document.uri, this.#glog.error)
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
     }
   }
 
@@ -543,10 +545,9 @@ class Sassy {
 
       this.#stopWatching(filePath)
       this.#themeMap.delete(filePath)
-      this.#dirtyThemes.delete(filePath)
       this.#autoBuildThemes.delete(filePath)
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
     }
   }
 
@@ -568,8 +569,6 @@ class Sassy {
         return
 
       const result = await theme.write()
-
-      this.#dirtyThemes.delete(themeUri.fsPath)
 
       const message = result.status === WriteStatus.SKIPPED
         ? `No changes to write`
@@ -599,7 +598,12 @@ class Sassy {
     const themePath = uri.fsPath
 
     if(enabled) {
+      const wasEnabled = this.#autoBuildThemes.has(themePath)
+
       this.#autoBuildThemes.add(themePath)
+      if(!wasEnabled)
+        this.#build(uri)
+
     } else {
       this.#autoBuildThemes.delete(themePath)
     }
@@ -642,6 +646,7 @@ class Sassy {
     let theme = this.#themeMap.get(uri.fsPath)
 
     if(!theme) {
+      // debugger
       theme = await this.#loadTheme(uri)
 
       if(!theme)
@@ -662,6 +667,7 @@ class Sassy {
 
   async #loadTheme(uri) {
     try {
+      // debugger
       const file = new FileObject(uri.fsPath)
       const theme = new Theme().setCache(this.#cache).setThemeFile(file)
 
@@ -677,7 +683,7 @@ class Sassy {
 
       return theme
     } catch(error) {
-      this.#glog.error(error)
+      this.#glog.error(error, error.stack)
     }
   }
 

@@ -111,9 +111,8 @@ class WebSassy {
     }
 
     this.#debounced = TK.Time.after(
-      1_000,
+      30,
       () => {
-        console.info("Hi there!")
         this.#setDirty(dirty, true)
       }
     )
@@ -121,6 +120,8 @@ class WebSassy {
 
   #aborter
   #setDirty(status, debounced=false) {
+    // debugger
+
     this.#aborter?.abort()
 
     console.info("#setDirty", status, debounced)
@@ -152,6 +153,7 @@ class WebSassy {
   }
 
   #updateThemeData(data) {
+    // debugger
     if(!data) {
       this.#elements.themeInfo.hidden = true
 
@@ -331,6 +333,8 @@ class WebSassy {
 
     this.#elements.diagEmpty.hidden = hasDiags
     this.#applyDiagFilter()
+
+    this.#setDirty(data.dirty)
   }
 
   #applyDiagFilter() {
