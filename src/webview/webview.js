@@ -110,8 +110,6 @@ class WebSassy {
         )
       })
     } else {
-      this.#aborter.abort()
-
       document.
         querySelectorAll(".dirty-theme").
         forEach(e => e.classList.remove("dirty"))
