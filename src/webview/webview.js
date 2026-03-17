@@ -1,4 +1,7 @@
+import * as TK from "./vendor/toolkit.esm.js"
+
 const vscode = acquireVsCodeApi()
+const {Notify} = TK
 
 class WebSassy {
   // debugger
@@ -7,10 +10,7 @@ class WebSassy {
 
   constructor() {
     // Register all elements with IDs
-    document.querySelectorAll("*[id]")
-      .forEach(e => {
-        this.#elements[toCamelCase(e.id)] = e
-      })
+    document.querySelectorAll("*[id]").forEach(e => this.#elements[toCamelCase(e.id)] = e)
 
     this.#elements.btnBuild.addEventListener("click", () =>
       vscode.postMessage({type: "requestBuild"})
@@ -27,6 +27,7 @@ class WebSassy {
     this.#elements.filterInfo.addEventListener("change", () => this.#applyDiagFilter())
 
     // Click things
+    Notify.on("click", () => vscode.postMessage({type: "requestBuild"}), this.#elements.btnBuild)
 
     // Diagnostics list click
     // this.#elements.diagList.addEventListener("click", evt => {
