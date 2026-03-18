@@ -9,6 +9,8 @@ class WebSassy {
   // debugger
   #elements = {}
   #diagnostics = []
+  #output = {}
+  #resolveLookup = {}
 
   constructor() {
     // Register all elements with IDs
@@ -22,16 +24,20 @@ class WebSassy {
       filterErrors,
       filterWarnings,
       filterInfo,
-      btnResolve,
-      resolveKey
     } = this.#elements
 
     Notify.on("input", () => this.#applyDiagFilter(), diagFilter)
     Notify.on("change", () => this.#applyDiagFilter(), filterErrors)
     Notify.on("change", () => this.#applyDiagFilter(), filterWarnings)
     Notify.on("change", () => this.#applyDiagFilter(), filterInfo)
-    Notify.on("click", () => this.#doResolve(), btnResolve)
-    Notify.on("keydown", evt => evt.key === "Enter" && this.#doResolve(), resolveKey)
+
+    const {
+      resolveKey,
+      resolveType,
+    } = this.#elements
+
+    Notify.on("change", ctx => this.#resolveTypeChanged(ctx), resolveType)
+    Notify.on("change", ctx => this.#doResolve(ctx), resolveKey)
 
     // Building things
     const {
@@ -164,6 +170,16 @@ class WebSassy {
 
     this.#elements.themePath.textContent = data.relativePath || ""
     this.#elements.switchAutobuild.checked = !!data.autoBuild
+
+    this.#output = {
+      colors: data.colors,
+      tokenColors: data.tokenColors,
+      semanticTokenColors: data.semanticTokenColors,
+    }
+
+    const resolveType = this.#elements.resolveType.value || "colors"
+    const options = this.#getResolveOptions(resolveType)
+    this.#updateResolveOptions(options)
 
     this.#setDirty(data.dirty)
   }
@@ -372,9 +388,85 @@ class WebSassy {
     }
   }
 
-  #doResolve() {
+  #resolveTypeChanged(ctx) {
+    // debugger
+    const {target} = ctx
+    const {value} = target
+    const options = this.#getResolveOptions(value)
+
+    this.#updateResolveOptions(options)
+  }
+
+  #getResolveOptions(type) {
+    const keys = this.#extractResolveKeys(type)
+
+    return keys.map(key => {
+      const option = document.createElement("vscode-option")
+      option.value = key
+      option.textContent = key
+
+      return option
+    })
+  }
+
+  #extractResolveKeys(type) {
+    switch(type) {
+      case "colors":
+        return Object.keys(this.#output?.colors ?? {})
+
+      case "tokenColors": {
+        const all =
+          (this.#output?.tokenColors ?? [])
+          .flatMap(({scope}) => {
+            if(!scope)
+              return []
+
+            return scope
+              .split(",")
+              .map(e => e.trim())
+              .filter(Boolean)
+          })
+
+        const deduped = Array.from(new Set(all))
+        const result = []
+
+        // Deduped will be the same size or smaller, so we can iterate
+        // over that.
+        for(const e of deduped) {
+          const count = all.filter(test => test === e).length
+
+          if(count === 1) {
+            result.push(e)
+          } else {
+            for(let i = 1; i <= count; i++)
+              result.push(`${e}:${i}`)
+          }
+        }
+
+        return result
+      }
+
+      case "semanticTokenColors":
+        return Object.keys(this.#output?.semanticTokenColors ?? {})
+    }
+
+    return []
+  }
+
+  #updateResolveOptions(options) {
+    // debugger
+    const {resolveKey} = this.#elements
+    resolveKey.replaceChildren()
+
+    options.forEach(option => resolveKey.appendChild(option))
+  }
+
+  #doResolve(ctx) {
+    // debugger
+    const {target} = ctx
+
     const resolveType = this.#elements.resolveType.value
-    const key = this.#elements.resolveKey.value?.trim()
+    const key = target.value?.trim()
 
     if(!key)
       return

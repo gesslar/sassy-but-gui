@@ -50,7 +50,7 @@
               <vscode-toolbar-container>
                 <vscode-textfield id="diag-filter" label="Filter" type="text"
                   placeholder="Filter by message or location">
-                  <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
+                  <vscode-icon slot="content-after" name="filter"></vscode-icon>
                 </vscode-textfield>
 
                 <vscode-checkbox-group id="severity-filters">
@@ -83,17 +83,14 @@
 
           <div class="resolve-form" hidden>
             <vscode-toolbar-container>
-              <vscode-single-select id="resolve-type">
-                <vscode-option value="color" selected>Color</vscode-option>
-                <vscode-option value="tokenColor">Token Color</vscode-option>
-                <vscode-option value="semanticTokenColor">Semantic Token Color</vscode-option>
+              <vscode-single-select id="resolve-type" defaultValue="colors">
+                <vscode-option value="colors" selected>Color</vscode-option>
+                <vscode-option value="tokenColors">Token Color</vscode-option>
+                <vscode-option value="semanticTokenColors">Semantic Token Color</vscode-option>
               </vscode-single-select>
 
-              <vscode-textfield id="resolve-key" label="Key" placeholder="e.g. editor.background" type="text">
-                <vscode-icon slot="content-after" name="filter" action-icon></vscode-icon>
-              </vscode-textfield>
-
-              <vscode-toolbar-button id="btn-resolve" icon="list-tree">Resolve</vscode-toolbar-button>
+              <vscode-single-select id="resolve-key" filter="contains" combobox>
+              </vscode-single-select>
 
             </vscode-toolbar-container>
           </div>

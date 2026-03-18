@@ -197,16 +197,19 @@ class Sassy {
         return
 
       const panel = this.#getPanelForTheme(uri)
+      const {colors, tokenColors, semanticTokenColors} = theme.getOutput() ?? {}
 
       if(panel) {
         const dirty = theme.canWrite() && await theme.wouldWrite()
-
         panel.setTitle(theme.getName())
         panel.postMessage({
           type: "themeData",
           data: {
             name: theme.getName(),
             path: uri.fsPath,
+            colors,
+            tokenColors,
+            semanticTokenColors,
             relativePath: workspace.asRelativePath(uri),
             proof: theme.getProof(),
             autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
@@ -371,11 +374,11 @@ class Sassy {
       const resolver = new Resolve()
       let data
 
-      if(resolveType === "color")
+      if(resolveType === "colors")
         data = await resolver.color(theme, key)
-      else if(resolveType === "tokenColor")
+      else if(resolveType === "tokenColors")
         data = await resolver.tokenColor(theme, key)
-      else if(resolveType === "semanticTokenColor")
+      else if(resolveType === "semanticTokenColors")
         data = await resolver.semanticTokenColor(theme, key)
 
       panel?.postMessage({
