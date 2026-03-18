@@ -151,6 +151,7 @@ class Sassy {
       if(!theme)
         return
 
+      theme.reset()
       await theme.build()
       this.#eventProvider.fire("theme.built", uri, this.#glog.error)
     } catch(error) {
