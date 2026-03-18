@@ -28,10 +28,10 @@ class WebSassy {
 
     Notify.on("input", () => this.#applyDiagFilter(), diagFilter)
     Notify.on("change", () => this.#applyDiagFilter(), filterErrors)
-    Notify.on("input", () => this.#applyDiagFilter(), filterWarnings)
-    Notify.on("input", () => this.#applyDiagFilter(), filterInfo)
+    Notify.on("change", () => this.#applyDiagFilter(), filterWarnings)
+    Notify.on("change", () => this.#applyDiagFilter(), filterInfo)
     Notify.on("click", () => this.#doResolve(), btnResolve)
-    Notify.on("keydown", evt => evt.key === "ENter" && this.#doResolve(), resolveKey)
+    Notify.on("keydown", evt => evt.key === "Enter" && this.#doResolve(), resolveKey)
 
     // Building things
     const {
@@ -338,6 +338,7 @@ class WebSassy {
   }
 
   #applyDiagFilter() {
+    // debugger
     const filterText = this.#elements.diagFilter?.value?.toLowerCase() ?? ""
     const showErrors = this.#elements.filterErrors.checked
     const showWarnings = this.#elements.filterWarnings.checked
@@ -364,7 +365,10 @@ class WebSassy {
         visible = text.toLowerCase().includes(filterText)
       }
 
-      el.classList.toggle("hidden", !visible)
+      if(visible)
+        el.removeAttribute("hidden")
+      else
+        el.setAttribute("hidden", "")
     }
   }
 
@@ -410,9 +414,8 @@ class WebSassy {
 
         const swatch = el.querySelector(".step-swatch")
 
-        if(isHexColor(step.value)) {
+        if(isHexColor(step.value))
           swatch.style.backgroundColor = step.value
-        }
 
         trail.appendChild(el)
       }
