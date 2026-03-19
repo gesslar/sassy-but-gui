@@ -11,6 +11,7 @@ class WebSassy {
   #diagnostics = []
   #output = {}
   #resolveLookup = {}
+  #jumps = new TK.DisposerClass()
 
   constructor() {
     // Register all elements with IDs
@@ -47,16 +48,6 @@ class WebSassy {
 
     Notify.on("change", evt => postMessage({type: "toggleAutoBuild", enabled: evt.target.checked}), switchAutobuild)
     Notify.on("click", () => postMessage({type: "requestBuild"}), btnBuild)
-
-    // Diagnostics list click
-    // this.#elements.diagList.addEventListener("click", evt => {
-    //   const item = evt.target.closest(".diag-item")
-
-    //   if(!item?.dataset.location)
-    //     return
-
-    //   vscode.postMessage({type: "jumpToLocation", location: item.dataset.location})
-    // })
 
     // Messages from extension
     Notify.on("message", evt => this.#onMessage(evt))
@@ -351,6 +342,16 @@ class WebSassy {
     this.#setDirty(data.dirty)
   }
 
+  #jump(element) {
+    if(!element?.dataset.location)
+      return
+
+    vscode.postMessage({
+      type: "jumpToLocation",
+      location: element.dataset.location
+    })
+  }
+
   #updateDiagnostics(data) {
     if(!data)
       return
@@ -359,13 +360,11 @@ class WebSassy {
 
     const container = this.#elements.diagList
     container.textContent = ""
+    this.#jumps.dispose()
 
     ;["variables", "colors", "tokenColors", "semanticTokenColors"].forEach(category => {
       const group = document.createElement("vscode-tree-item")
-      group.className = "title"
-      const thisIsStupid = document.createElement("span")
-      thisIsStupid.textContent = category
-      group.appendChild(thisIsStupid)
+      group.textContent = category
 
       const issues = data[category] ?? []
       if(!issues.length) {
@@ -384,10 +383,40 @@ class WebSassy {
 
       if(category === "variables") {
         const children = this.#generateVariablesChildren(issues)
-        children.forEach(e => group.appendChild(e))
+        children.forEach(({el, severity, issue, jumps}) => {
+          group.appendChild(el)
+          this.#diagnostics.push({el, severity, issue})
+          jumps.forEach(jump =>
+            this.#jumps.register(Notify.on("click", () => this.#jump(jump), jump))
+          )
+        })
       } else if(category === "colors") {
         const children = this.#generateColorsChildren(issues)
-        children.forEach(e => group.appendChild(e))
+        children.forEach(({el, severity, issue, jumps}) => {
+          group.appendChild(el)
+          this.#diagnostics.push({el, severity, issue})
+          jumps.forEach(jump =>
+            this.#jumps.register(Notify.on("click", () => this.#jump(jump), jump))
+          )
+        })
+      } else if(category === "tokenColors") {
+        const children = this.#generateTokenColorsChildren(issues)
+        children.forEach(({el, severity, issue, jumps}) => {
+          group.appendChild(el)
+          this.#diagnostics.push({el, severity, issue, jumps})
+          jumps.forEach(jump =>
+            this.#jumps.register(Notify.on("click", () => this.#jump(jump), jump))
+          )
+        })
+      } else if(category === "semanticTokenColors") {
+        const children = this.#generateSemanticTokenColorsChildren(issues)
+        children.forEach(({el, severity, issue, jumps}) => {
+          group.appendChild(el)
+          this.#diagnostics.push({el, severity, issue})
+          jumps.forEach(jump =>
+            this.#jumps.register(Notify.on("click", () => this.#jump(jump), jump))
+          )
+        })
       }
 
       container.appendChild(group)
@@ -398,6 +427,8 @@ class WebSassy {
 
   #generateVariablesChildren(issues) {
     return issues.map(issue => {
+      const jumps = []
+
       // This issue
       const severity = this.#mapSeverity(issue.severity)
       const child = document.createElement("vscode-tree-item")
@@ -423,7 +454,8 @@ class WebSassy {
       // The message that is this tree item's display
       const label = document.createElement("span")
       label.className = "diag-message"
-      label.textContent = issue.message
+      label.textContent = `${issue.type} '${issue.variable}'`
+      label.title = label.textContent
       child.appendChild(label)
 
       // This card is a child of this issue and contains all of the
@@ -439,40 +471,45 @@ class WebSassy {
       inner.className = "diag-card-inner"
       card.appendChild(inner)
 
-      if(issue.description) {
-        const propertyDescription = document.createElement("div")
-        propertyDescription.className = "diag-card-description"
-        propertyDescription.textContent = issue.description
-        propertyDescription.title = issue.description
-        inner.appendChild(propertyDescription)
-      }
+      const variableMessage = document.createElement("div")
+      variableMessage.textContent = issue.message
+      variableMessage.className = "diag-card-description"
+      inner.appendChild(variableMessage)
 
-      const property = document.createElement("div")
-      property.className = "diag-card-property"
-      inner.appendChild(property)
+      const locationRow = document.createElement("div")
+      locationRow.className = "diag-card-location-row"
+      inner.append(locationRow)
 
-      const propertyName = document.createElement("span")
-      propertyName.textContent = issue.property
-      propertyName.className = "diag-card-name"
-      property.appendChild(propertyName)
+      // This is an icon. It is also a button. You will like it. This is non-
+      // negotiable.
+      const linkIcon = document.createElement("vscode-icon")
+      linkIcon.actionIcon = true
+      linkIcon.name = "open-in-product"
+      linkIcon.title = `Jump to issue.`
+      linkIcon.className = "diag-card-location-link"
+      linkIcon.dataset.location = issue.location
+      jumps.push(linkIcon)
+      locationRow.appendChild(linkIcon)
 
-      if(issue.value) {
-        const propertyValue = document.createElement("span")
-        propertyValue.textContent = issue.value
-        propertyValue.className = "diag-card-value"
-        property.appendChild(propertyValue)
+      const {file, line, column} =
+        /^(?<file>.*):(?<line>\d+):(?<column>\d+)$/.exec(issue.location)?.groups ?? {}
 
-        const swatch = document.createElement("span")
-        swatch.className = "diag-card-swatch"
-        swatch.style.backgroundColor = issue.value
-        property.appendChild(swatch)
-      }
+      const lint = `${file} [L ${line}, C ${column}]`
 
-      return child
+      const variableLocation = document.createElement("span")
+      variableLocation.className = "diag-card-location"
+      variableLocation.textContent = lint
+      variableLocation.title = lint
+      locationRow.appendChild(variableLocation)
+
+      return {el: child, severity, issue, jumps}
     })
   }
+
   #generateColorsChildren(issues) {
     return issues.map(issue => {
+      const jumps = []
+
       // This issue
       const severity = this.#mapSeverity(issue.severity)
       const child = document.createElement("vscode-tree-item")
@@ -498,7 +535,8 @@ class WebSassy {
       // The message that is this tree item's display
       const label = document.createElement("span")
       label.className = "diag-message"
-      label.textContent = issue.message
+      label.textContent = `${issue.message}`
+      label.title = label.textContent
       child.appendChild(label)
 
       // This card is a child of this issue and contains all of the
@@ -543,7 +581,171 @@ class WebSassy {
         property.appendChild(swatch)
       }
 
-      return child
+      return {el: child, severity, issue, jumps}
+    })
+  }
+
+  #generateTokenColorsChildren(issues) {
+    return issues.map(issue => {
+      const jumps = []
+
+      // This issue
+      const severity = this.#mapSeverity(issue.severity)
+      const child = document.createElement("vscode-tree-item")
+      child.branch = true
+      child.open = false
+      child.hideArrows = true
+      child.indentGuides = "none"
+
+      // The icon for when this tree item is closed
+      const iconClosed = document.createElement("vscode-icon")
+      iconClosed.slot = "icon-branch"
+      iconClosed.name = severity
+      iconClosed.className = `diag-icon ${severity}`
+      child.appendChild(iconClosed)
+
+      // The icon for when this tree item is open
+      const iconOpen = document.createElement("vscode-icon")
+      iconOpen.slot = "icon-branch-opened"
+      iconOpen.name = severity
+      iconOpen.className = `diag-icon ${severity}`
+      child.appendChild(iconOpen)
+
+      // The message that is this tree item's display
+      const label = document.createElement("span")
+      label.className = "diag-message"
+      label.textContent = `${issue.message}`
+      label.title = `${issue.message}`
+      child.appendChild(label)
+
+      // This card is a child of this issue and contains all of the
+      // more meta information.
+      const card = document.createElement("vscode-tree-item")
+      card.className = "diag-card"
+      child.appendChild(card)
+
+      // We have to do a div here to wrap the entire card because
+      // vscode-tree-item is display: inline-block. Which is
+      // tedious af and makes everything weird. No, thank you.
+      const inner = document.createElement("div")
+      inner.className = "diag-card-inner"
+      card.appendChild(inner)
+
+      const locs = issue.occurrences
+        ? issue.occurrences.map(e => e.location)
+        : [issue.location]
+
+      locs.forEach(loc => {
+        const locationRow = document.createElement("div")
+        locationRow.className = "diag-card-location-row"
+        inner.append(locationRow)
+
+        // This is an icon. It is also a button. You will like it. This is non-
+        // negotiable.
+        const linkIcon = document.createElement("vscode-icon")
+        linkIcon.actionIcon = true
+        linkIcon.name = "open-in-product"
+        linkIcon.title = `Jump to issue.`
+        linkIcon.className = "diag-card-location-link"
+        linkIcon.dataset.location = loc
+        locationRow.appendChild(linkIcon)
+        jumps.push(linkIcon)
+
+        const {file, line, column} =
+          /^(?<file>.*):(?<line>\d+):(?<column>\d+)$/.exec(loc)?.groups ?? {}
+
+        const lint = `${file} [L ${line}, C ${column}]`
+
+        const variableLocation = document.createElement("span")
+        variableLocation.className = "diag-card-location"
+        variableLocation.textContent = lint
+        variableLocation.title = lint
+        locationRow.appendChild(variableLocation)
+      })
+
+      return {el: child, severity, issue, jumps}
+    })
+  }
+
+  #generateSemanticTokenColorsChildren(issues) {
+    return issues.map(issue => {
+      const jumps = []
+
+      // This issue
+      const severity = this.#mapSeverity(issue.severity)
+      const child = document.createElement("vscode-tree-item")
+      child.branch = true
+      child.open = false
+      child.hideArrows = true
+      child.indentGuides = "none"
+
+      // The icon for when this tree item is closed
+      const iconClosed = document.createElement("vscode-icon")
+      iconClosed.slot = "icon-branch"
+      iconClosed.name = severity
+      iconClosed.className = `diag-icon ${severity}`
+      child.appendChild(iconClosed)
+
+      // The icon for when this tree item is open
+      const iconOpen = document.createElement("vscode-icon")
+      iconOpen.slot = "icon-branch-opened"
+      iconOpen.name = severity
+      iconOpen.className = `diag-icon ${severity}`
+      child.appendChild(iconOpen)
+
+      // The message that is this tree item's display
+      const label = document.createElement("span")
+      label.className = "diag-message"
+      label.textContent = `${issue.message}`
+      label.title = `${issue.message}`
+      child.appendChild(label)
+
+      // This card is a child of this issue and contains all of the
+      // more meta information.
+      const card = document.createElement("vscode-tree-item")
+      card.className = "diag-card"
+      child.appendChild(card)
+
+      // We have to do a div here to wrap the entire card because
+      // vscode-tree-item is display: inline-block. Which is
+      // tedious af and makes everything weird. No, thank you.
+      const inner = document.createElement("div")
+      inner.className = "diag-card-inner"
+      card.appendChild(inner)
+
+      const locs = issue.occurrences
+        ? issue.occurrences.map(e => e.location)
+        : [issue.location]
+
+      locs.forEach(loc => {
+        const locationRow = document.createElement("div")
+        locationRow.className = "diag-card-location-row"
+        inner.append(locationRow)
+
+        // This is an icon. It is also a button. You will like it. This is non-
+        // negotiable.
+        const linkIcon = document.createElement("vscode-icon")
+        linkIcon.actionIcon = true
+        linkIcon.name = "open-in-product"
+        linkIcon.title = `Jump to issue.`
+        linkIcon.className = "diag-card-location-link"
+        linkIcon.dataset.location = issue.location
+        jumps.push(linkIcon)
+        locationRow.appendChild(linkIcon)
+
+        const {file, line, column} =
+          /^(?<file>.*):(?<line>\d+):(?<column>\d+)$/.exec(loc)?.groups ?? {}
+
+        const lint = `${file} [L ${line}, C ${column}]`
+
+        const variableLocation = document.createElement("span")
+        variableLocation.className = "diag-card-location"
+        variableLocation.textContent = lint
+        variableLocation.title = lint
+        locationRow.appendChild(variableLocation)
+      })
+
+      return {el: child, severity, issue, jumps}
     })
   }
 
@@ -567,12 +769,14 @@ class WebSassy {
 
         if(severity === "info" && !showInfo)
           visible = false
-      }
 
-      if(visible && filterText) {
-        const text = (issue.message || "") + (issue.location || "")
+        if(visible && filterText) {
+          const text = (issue.message || "") + (issue.location || "")
 
-        visible = text.toLowerCase().includes(filterText)
+          visible = text.toLowerCase().includes(filterText)
+        }
+      } else {
+        visible = false
       }
 
       if(visible)
