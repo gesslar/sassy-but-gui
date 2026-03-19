@@ -185,119 +185,86 @@ main {
       }
 
       vscode-tree {
-        flex: 1;
+        // flex: 1;
         min-height: 0;
         overflow-y: auto;
       }
 
       /* Tree view card layout */
       #diag-list {
-        display: flex;
-        flex-direction: column;
+        // display: flex;
+        // flex-direction: column;
+
+        .diag-icon {
+          &.info {
+            --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
+          }
+
+          &.warning {
+            --vscode-icon-foreground: var(--vscode-editorWarning-foreground);
+          }
+
+          &.error {
+            --vscode-icon-foreground: var(--vscode-editorError-foreground);
+          }
+        }
+
+        .diag-message {
+          font-size: 1em;
+        }
 
         .diag-card {
-          margin-left: 1rem;
-          display: flex;
-          align-items: flex-start;
-          gap: 0.5rem;
-          padding: 0.2rem 0;
+          .diag-card-inner {
+            display: block;
 
-          .toggleable:not(.open) {
-            display: none;
-          }
-
-          .toggle-button {
-            transform: rotate(90deg);
-
-            &.open {
-              transform: rotate(180deg);
-            }
-          }
-
-          .diag-card-icon {
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            padding-top: 0.1rem;
-
-            [name="info"] {
-              --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
+            .diag-card-description {
+              font-style: italic;
+              color: var(--vscode-descriptionForeground);
+              overflow-wrap: break-word;
+              max-width: 100%;
+              overflow: hidden;
+              text-wrap-mode: wrap;
             }
 
-            [name="warning"] {
-              --vscode-icon-foreground: var(--vscode-editorWarning-foreground);
+            .diag-card-property {
+              display: flex;
+              align-items: center;
+              gap: .8em;
+
+              .diag-card-name {
+                display: inline-block;
+                font-family: var(--font-family-mono);
+              }
+
+              .diag-card-value {
+                white-space: pre-wrap;
+                color: var(--text-mono-foreground);
+                background-color: var(--text-mono-background);
+                border-radius: .2em;
+                padding: 0 .2em;
+                display: inline-block;
+                font-family: var(--font-family-mono);
+              }
+
+              .diag-card-swatch {
+                display: inline-block;
+                width: 1em;
+                height: 1em;
+                border-radius: 2px;
+                border: 1px solid var(--vscode-panel-border);
+                vertical-align: middle;
+              }
             }
 
-            [name="error"] {
-              --vscode-icon-foreground: var(--vscode-editorError-foreground);
+            .diag-card-precedence {
+              color: var(--vscode-descriptionForeground);
             }
-          }
 
-          .diag-card-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-            min-width: 0;
-            margin-top: 0;
-          }
-
-          .diag-card-message {
-            font-size: 0.9rem;
-            word-break: break-word;
-          }
-
-          .diag-card-meta {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            flex-wrap: wrap;
-            margin-top: 0.15rem;
-          }
-
-          .diag-card-tag {
-            font-size: 0.9em;
-            font-family: var(--vscode-editor-font-family);
-            background: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 0.1rem 0.4rem;
-            border-radius: 3px;
-            white-space: nowrap;
-          }
-
-          .diag-card-value-label {
-            font-size: 0.9em;
-          }
-
-          .diag-card-value {
-            font-size: 0.9em;
-            font-family: var(--font-family-mono);
-          }
-
-          .diag-card-swatch {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-            border: 1px solid var(--vscode-panel-border);
-            flex-shrink: 0;
-          }
-
-          .diag-card-description {
-            font-size: 0.9em;
-            font-style: italic;
-            margin-top: 0.15rem;
-          }
-
-          .diag-card-precedence {
-            font-size: 0.9em;
-            color: var(--vscode-descriptionForeground);
-            margin-top: 0.15rem;
-          }
-
-          .diag-card-location {
-            font-size: 0.9em;
-            color: var(--vscode-descriptionForeground);
-            font-family: var(--vscode-editor-font-family);
-            word-break: break-all;
+            .diag-card-location {
+              color: var(--vscode-descriptionForeground);
+              font-family: var(--vscode-editor-font-family);
+              word-break: break-all;
+            }
           }
         }
       }

@@ -130,8 +130,6 @@ class WebSassy {
 
     this.#aborter?.abort()
 
-    console.info("#setDirty", status, debounced)
-
     if(!debounced) {
       this.#dirtyDebouncer(status)
 
@@ -184,7 +182,7 @@ class WebSassy {
     this.#setDirty(data.dirty)
   }
 
-  #updateDiagnostics(data) {
+  #_updateDiagnostics(data) {
     // debugger
 
     if(!data)
@@ -353,6 +351,202 @@ class WebSassy {
     this.#setDirty(data.dirty)
   }
 
+  #updateDiagnostics(data) {
+    if(!data)
+      return
+
+    this.#diagnostics = []
+
+    const container = this.#elements.diagList
+    container.textContent = ""
+
+    ;["variables", "colors", "tokenColors", "semanticTokenColors"].forEach(category => {
+      const group = document.createElement("vscode-tree-item")
+      group.className = "title"
+      const thisIsStupid = document.createElement("span")
+      thisIsStupid.textContent = category
+      group.appendChild(thisIsStupid)
+
+      const issues = data[category] ?? []
+      if(!issues.length) {
+        group.branch = false
+
+        return
+      }
+
+      group.branch = true
+      group.open = true
+
+      const groupCount = document.createElement("vscode-badge")
+      groupCount.variant = "counter"
+      groupCount.textContent = issues.length
+      group.appendChild(groupCount)
+
+      if(category === "variables") {
+        const children = this.#generateVariablesChildren(issues)
+        children.forEach(e => group.appendChild(e))
+      } else if(category === "colors") {
+        const children = this.#generateColorsChildren(issues)
+        children.forEach(e => group.appendChild(e))
+      }
+
+      container.appendChild(group)
+    })
+
+    // this.#elements.diagEmpty.removeAttribute("hidden")
+  }
+
+  #generateVariablesChildren(issues) {
+    return issues.map(issue => {
+      // This issue
+      const severity = this.#mapSeverity(issue.severity)
+      const child = document.createElement("vscode-tree-item")
+      child.branch = true
+      child.open = false
+      child.hideArrows = true
+      child.indentGuides = "none"
+
+      // The icon for when this tree item is closed
+      const iconClosed = document.createElement("vscode-icon")
+      iconClosed.slot = "icon-branch"
+      iconClosed.name = severity
+      iconClosed.className = `diag-icon ${severity}`
+      child.appendChild(iconClosed)
+
+      // The icon for when this tree item is open
+      const iconOpen = document.createElement("vscode-icon")
+      iconOpen.slot = "icon-branch-opened"
+      iconOpen.name = severity
+      iconOpen.className = `diag-icon ${severity}`
+      child.appendChild(iconOpen)
+
+      // The message that is this tree item's display
+      const label = document.createElement("span")
+      label.className = "diag-message"
+      label.textContent = issue.message
+      child.appendChild(label)
+
+      // This card is a child of this issue and contains all of the
+      // more meta information.
+      const card = document.createElement("vscode-tree-item")
+      card.className = "diag-card"
+      child.appendChild(card)
+
+      // We have to do a div here to wrap the entire card because
+      // vscode-tree-item is display: inline-block. Which is
+      // tedious af and makes everything weird. No, thank you.
+      const inner = document.createElement("div")
+      inner.className = "diag-card-inner"
+      card.appendChild(inner)
+
+      if(issue.description) {
+        const propertyDescription = document.createElement("div")
+        propertyDescription.className = "diag-card-description"
+        propertyDescription.textContent = issue.description
+        propertyDescription.title = issue.description
+        inner.appendChild(propertyDescription)
+      }
+
+      const property = document.createElement("div")
+      property.className = "diag-card-property"
+      inner.appendChild(property)
+
+      const propertyName = document.createElement("span")
+      propertyName.textContent = issue.property
+      propertyName.className = "diag-card-name"
+      property.appendChild(propertyName)
+
+      if(issue.value) {
+        const propertyValue = document.createElement("span")
+        propertyValue.textContent = issue.value
+        propertyValue.className = "diag-card-value"
+        property.appendChild(propertyValue)
+
+        const swatch = document.createElement("span")
+        swatch.className = "diag-card-swatch"
+        swatch.style.backgroundColor = issue.value
+        property.appendChild(swatch)
+      }
+
+      return child
+    })
+  }
+  #generateColorsChildren(issues) {
+    return issues.map(issue => {
+      // This issue
+      const severity = this.#mapSeverity(issue.severity)
+      const child = document.createElement("vscode-tree-item")
+      child.branch = true
+      child.open = false
+      child.hideArrows = true
+      child.indentGuides = "none"
+
+      // The icon for when this tree item is closed
+      const iconClosed = document.createElement("vscode-icon")
+      iconClosed.slot = "icon-branch"
+      iconClosed.name = severity
+      iconClosed.className = `diag-icon ${severity}`
+      child.appendChild(iconClosed)
+
+      // The icon for when this tree item is open
+      const iconOpen = document.createElement("vscode-icon")
+      iconOpen.slot = "icon-branch-opened"
+      iconOpen.name = severity
+      iconOpen.className = `diag-icon ${severity}`
+      child.appendChild(iconOpen)
+
+      // The message that is this tree item's display
+      const label = document.createElement("span")
+      label.className = "diag-message"
+      label.textContent = issue.message
+      child.appendChild(label)
+
+      // This card is a child of this issue and contains all of the
+      // more meta information.
+      const card = document.createElement("vscode-tree-item")
+      card.className = "diag-card"
+      child.appendChild(card)
+
+      // We have to do a div here to wrap the entire card because
+      // vscode-tree-item is display: inline-block. Which is
+      // tedious af and makes everything weird. No, thank you.
+      const inner = document.createElement("div")
+      inner.className = "diag-card-inner"
+      card.appendChild(inner)
+
+      if(issue.description) {
+        const propertyDescription = document.createElement("div")
+        propertyDescription.className = "diag-card-description"
+        propertyDescription.textContent = issue.description
+        propertyDescription.title = issue.description
+        inner.appendChild(propertyDescription)
+      }
+
+      const property = document.createElement("div")
+      property.className = "diag-card-property"
+      inner.appendChild(property)
+
+      const propertyName = document.createElement("span")
+      propertyName.textContent = issue.property
+      propertyName.className = "diag-card-name"
+      property.appendChild(propertyName)
+
+      if(issue.value) {
+        const propertyValue = document.createElement("span")
+        propertyValue.textContent = issue.value
+        propertyValue.className = "diag-card-value"
+        property.appendChild(propertyValue)
+
+        const swatch = document.createElement("span")
+        swatch.className = "diag-card-swatch"
+        swatch.style.backgroundColor = issue.value
+        property.appendChild(swatch)
+      }
+
+      return child
+    })
+  }
+
   #applyDiagFilter() {
     // debugger
     const filterText = this.#elements.diagFilter?.value?.toLowerCase() ?? ""
@@ -417,15 +611,15 @@ class WebSassy {
       case "tokenColors": {
         const all =
           (this.#output?.tokenColors ?? [])
-          .flatMap(({scope}) => {
-            if(!scope)
-              return []
+            .flatMap(({scope}) => {
+              if(!scope)
+                return []
 
-            return scope
-              .split(",")
-              .map(e => e.trim())
-              .filter(Boolean)
-          })
+              return scope
+                .split(",")
+                .map(e => e.trim())
+                .filter(Boolean)
+            })
 
         const deduped = Array.from(new Set(all))
         const result = []
