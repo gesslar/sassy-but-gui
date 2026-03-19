@@ -381,6 +381,28 @@ class Sassy {
       else if(resolveType === "semanticTokenColors")
         data = await resolver.semanticTokenColor(theme, key)
 
+      const lookup = key => {
+        if(/^\^\(([^)]+)\)$/.test(key)) {
+          return `palette.${key.match(/^\^\(([^)]+)\)$/)[1]}`
+        } else if(/^\$(?!palette\.)/.test(key)) {
+          return `vars.${key.slice(1)}`
+        } else if(/^\$/.test(key)) {
+          return key.slice(1)
+        } else {
+          return key
+        }
+      }
+
+      if(data.found === true) {
+        data.location = theme.findSourceLocation(lookup(data.name))
+
+        data.trail.forEach(datum => {
+          if(datum.type === "variable" || datum.type === "séance") {
+            datum.location = theme.findSourceLocation(lookup(datum.value))
+          }
+        })
+      }
+
       panel?.postMessage({
         type: "resolveResult",
         data: {...data, key, resolveType}
