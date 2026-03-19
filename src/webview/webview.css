@@ -101,6 +101,13 @@ main {
     }
   }
 
+  .jump-link {
+    margin: 0.1rem;
+    border-radius: 0.2rem;
+    vertical-align: middle;
+    --vscode-icon-foreground: var(--vscode-editorLink-activeForeground);
+  }
+
   #main-tabs {
     --vscode-panel-background: var(--editor-background);
     display: grid;
@@ -267,12 +274,6 @@ main {
               display: flex;
               align-items: center;
               gap: .4em;
-
-              .diag-card-location-link {
-                margin: 0.1rem;
-                border-radius: 0.2rem;
-                vertical-align: middle;
-              }
 
               .diag-card-location {
                 color: var(--vscode-descriptionForeground);

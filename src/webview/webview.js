@@ -11,7 +11,8 @@ class WebSassy {
   #diagnostics = []
   #output = {}
   #resolveLookup = {}
-  #jumps = new TK.DisposerClass()
+  #diagnosticDisposer = new TK.DisposerClass()
+  #resolveDisposer = new TK.DisposerClass()
 
   constructor() {
     // Register all elements with IDs
@@ -191,7 +192,7 @@ class WebSassy {
 
     const container = this.#elements.diagList
     container.textContent = ""
-    this.#jumps.dispose()
+    this.#diagnosticDisposer.dispose()
 
     const generators = {
       variables:
@@ -228,7 +229,7 @@ class WebSassy {
         group.appendChild(el)
         this.#diagnostics.push({el, severity, issue})
         jumps.forEach(jump =>
-          this.#jumps.register(Notify.on("click", () => this.#jump(jump), jump))
+          this.#diagnosticDisposer.register(Notify.on("click", () => this.#jump(jump), jump))
         )
       })
 
@@ -296,7 +297,7 @@ class WebSassy {
     linkIcon.actionIcon = true
     linkIcon.name = "open-in-product"
     linkIcon.title = `Jump to issue.`
-    linkIcon.className = "diag-card-location-link"
+    linkIcon.className = "jump-link"
     linkIcon.dataset.location = loc
     jumps.push(linkIcon)
     locationRow.appendChild(linkIcon)
@@ -521,6 +522,11 @@ class WebSassy {
   }
 
   #showResolveResult(data) {
+    // Always clear
+    this.#resolveDisposer.dispose()
+    const trail = this.#elements.resolveTrail
+    trail.replaceChildren()
+
     if(!data?.found) {
       this.#elements.resolveResult.hidden = true
       this.#showError("Could not resolve the specified key.")
@@ -533,11 +539,6 @@ class WebSassy {
     this.#elements.resolveResultTitle.textContent =
       `Resolution: ${data.key || ""}`
 
-    // Trail
-    const trail = this.#elements.resolveTrail
-
-    trail.innerHTML = ""
-
     const template = document.getElementById("resolve-step-template")
 
     if(data.trail?.length) {
@@ -549,6 +550,20 @@ class WebSassy {
 
         el.querySelector(".step-type").textContent = step.type || ""
         el.querySelector(".step-value").textContent = step.value || ""
+
+        if(step.location) {
+          const linkIcon = document.createElement("vscode-icon")
+          linkIcon.actionIcon = true
+          linkIcon.name = "open-in-product"
+          linkIcon.title = step.location
+          linkIcon.className = "jump-link"
+          linkIcon.dataset.location = step.location
+          el.querySelector(".step-link").appendChild(linkIcon)
+
+          this.#resolveDisposer.register(
+            Notify.on("click", () => this.#jump(linkIcon), linkIcon)
+          )
+        }
 
         const swatch = el.querySelector(".step-swatch")
 
