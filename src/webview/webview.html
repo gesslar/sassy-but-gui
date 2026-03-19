@@ -23,17 +23,21 @@
 
     <div id="theme-info">
       <vscode-toolbar-container>
-        <span class="dirty-theme">
-          <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">
-            Build theme
-          </vscode-toolbar-button>
-        </span>
-        <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
+        <div>
+          <span class="dirty-theme">
+            <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">
+              Build theme
+            </vscode-toolbar-button>
+          </span>
+          <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
+        </div>
       </vscode-toolbar-container>
+
       <div id="theme-header">
         <span id="theme-path">—</span>
         <!-- <span id="dirty-theme"><vscode-icon name="symbol-color">Dirty</vscode-icon></span> -->
       </div>
+
     </div>
 
     <vscode-tabs id="main-tabs" panel selected-index="0">
@@ -48,16 +52,17 @@
           <div id="view-diagnostics" class="tab-panel">
             <div id="filter-bar">
               <vscode-toolbar-container>
+
                 <vscode-textfield id="diag-filter" label="Filter" type="text"
                   placeholder="Filter by message or location">
-                  <vscode-icon slot="content-after" name="filter"></vscode-icon>
+                  <vscode-toolbar-button id="filter-errors" slot="content-after" icon="error"
+                    checked></vscode-toolbar-button>
+                  <vscode-toolbar-button id="filter-warnings" slot="content-after" icon="warning"
+                    checked></vscode-toolbar-button>
+                  <vscode-toolbar-button id="filter-info" slot="content-after" icon="info"
+                    checked></vscode-toolbar-button>
                 </vscode-textfield>
 
-                <vscode-checkbox-group id="severity-filters">
-                  <vscode-checkbox checked="true" toggle id="filter-errors" label="Errors"></vscode-checkbox>
-                  <vscode-checkbox checked="true" toggle id="filter-warnings" label="Warnings"></vscode-checkbox>
-                  <vscode-checkbox checked="true" toggle id="filter-info" label="Info"></vscode-checkbox>
-                </vscode-checkbox-group>
               </vscode-toolbar-container>
             </div>
 

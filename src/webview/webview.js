@@ -1,4 +1,5 @@
 import * as TK from "./vendor/toolkit.esm.js"
+import * as Elements from "https://file%2B.vscode-resource.vscode-cdn.net/projects/git/sassy-but-gui/node_modules/%40vscode-elements/elements/dist/bundled.js"
 
 const vscode = acquireVsCodeApi()
 
@@ -28,10 +29,10 @@ class WebSassy {
       filterInfo,
     } = this.#elements
 
-    Notify.on("input", () => this.#applyDiagFilter(), diagFilter)
-    Notify.on("change", () => this.#applyDiagFilter(), filterErrors)
-    Notify.on("change", () => this.#applyDiagFilter(), filterWarnings)
-    Notify.on("change", () => this.#applyDiagFilter(), filterInfo)
+    Notify.on("input", evt => this.#applyDiagFilter(evt), diagFilter)
+    Notify.on("click", evt => this.#applyDiagFilter(evt), filterErrors)
+    Notify.on("click", evt => this.#applyDiagFilter(evt), filterWarnings)
+    Notify.on("click", evt => this.#applyDiagFilter(evt), filterInfo)
 
     const {
       resolveKey,
@@ -398,8 +399,15 @@ class WebSassy {
     })
   }
 
-  #applyDiagFilter() {
+  #applyDiagFilter(evt) {
     // debugger
+    const {target} = evt ?? {}
+
+    console.log(TK.Data.typeOf(target ?? {}))
+
+    if(target && target instanceof Elements.VscodeToolbarButton)
+      target.checked = !target.checked
+
     const filterText = this.#elements.diagFilter?.value?.toLowerCase() ?? ""
     const showErrors = this.#elements.filterErrors.checked
     const showWarnings = this.#elements.filterWarnings.checked

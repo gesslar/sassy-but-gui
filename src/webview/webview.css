@@ -171,11 +171,35 @@ main {
         gap: 0.5rem;
         margin-bottom: 0.75rem;
         flex-wrap: wrap;
+        align-self: flex-end;
 
-        md-outlined-text-field {
+        vscode-textfield {
           flex: 1;
           min-width: 200px;
-          --md-outlined-text-field-container-shape: 6px;
+
+          vscode-toolbar-button {
+            margin: 0.2em;
+            border-radius: 0.3em;
+            border: 1px solid transparent;
+
+            &[icon="info"][checked] {
+              --vscode-icon-foreground: var(--vscode-inputValidation-infoForeground);
+              background-color: var(--vscode-inputValidation-infoBackground);
+              border-color: var(--vscode-inputValidation-infoBorder)
+            }
+
+            &[icon="warning"][checked] {
+              --vscode-icon-foreground: var(--vscode-inputValidation-warningForeground);
+              background-color: var(--vscode-inputValidation-warningBackground);
+              border-color: var(--vscode-inputValidation-warningBorder)
+            }
+
+            &[icon="error"][checked] {
+              --vscode-icon-foreground: var(--vscode-inputValidation-errorForeground);
+              background-color: var(--vscode-inputValidation-errorBackground);
+              border-color: var(--vscode-inputValidation-errorBorder)
+            }
+          }
         }
       }
 
