@@ -188,6 +188,7 @@ main {
         // flex: 1;
         min-height: 0;
         overflow-y: auto;
+        font-size: .9em;
       }
 
       /* Tree view card layout */
@@ -217,7 +218,8 @@ main {
           .diag-card-inner {
             display: block;
 
-            .diag-card-description {
+            .diag-card-description,
+            .diag-card-message {
               font-style: italic;
               color: var(--vscode-descriptionForeground);
               overflow-wrap: break-word;
@@ -226,6 +228,7 @@ main {
               text-wrap-mode: wrap;
             }
 
+            .diag-card-variable,
             .diag-card-property {
               display: flex;
               align-items: center;
@@ -260,10 +263,21 @@ main {
               color: var(--vscode-descriptionForeground);
             }
 
-            .diag-card-location {
-              color: var(--vscode-descriptionForeground);
-              font-family: var(--vscode-editor-font-family);
-              word-break: break-all;
+            .diag-card-location-row {
+              display: flex;
+              align-items: center;
+              gap: .4em;
+
+              .diag-card-location-link {
+                margin: 0.1rem;
+                border-radius: 0.2rem;
+                vertical-align: middle;
+              }
+
+              .diag-card-location {
+                color: var(--vscode-descriptionForeground);
+                vertical-align: middle;
+              }
             }
           }
         }
