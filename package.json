@@ -43,7 +43,7 @@
   "dependencies": {
     "@gesslar/sassy": "file:../sassy",
     "@gesslar/toolkit": "^4.4.0",
-    "@gesslar/vscode-theme-schema": "^1.0.0",
+    "@gesslar/vscode-theme-schema": "^1.1.0",
     "@vscode-elements/elements": "^2.5.1",
     "@vscode/codicons": "^0.0.45",
     "@vscode/vsce": "^3.7.1"

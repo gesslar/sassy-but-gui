@@ -2,8 +2,7 @@
 
 ## License
 
-sassy-but-gui is released into the public domain under the
-[Unlicense](UNLICENSE.txt).
+`sassy-but-gui` is released into the public domain under the [Unlicense](UNLICENSE.txt).
 
 This package includes or depends on third-party components under their own
 licenses:

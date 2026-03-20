@@ -221,7 +221,7 @@ class WebSassy {
       variables:
         issues => this.#generateVariablesChildren(issues),
       colors:
-        issues => this.#generateColorsChildren(issues),
+        issues => this.#generateColorsChildren(issues, data.dirty),
       tokenColors:
         issues => this.#generateTokenColorsChildren(issues),
       semanticTokenColors:
@@ -232,7 +232,7 @@ class WebSassy {
       const group = document.createElement("vscode-tree-item")
       const label = document.createElement("span")
       label.className = "diag-category-label"
-      label.textContent = "ooOo" + category
+      label.textContent = category
       group.appendChild(label)
 
       const issues = data[category] ?? []
@@ -356,7 +356,7 @@ class WebSassy {
     })
   }
 
-  #generateColorsChildren(issues) {
+  #generateColorsChildren(issues, dirty) {
     return issues.map(issue => {
       const {child, inner, severity, jumps} =
         this.#createDiagScaffold(issue, `${issue.message}`)
@@ -388,6 +388,15 @@ class WebSassy {
         swatch.className = "diag-card-swatch"
         swatch.style.backgroundColor = issue.value
         property.appendChild(swatch)
+      }
+
+      if(issue.location) {
+        this.#createLocationRow(issue.location, jumps, inner)
+      } else if(dirty) {
+        const hint = document.createElement("div")
+        hint.className = "diag-card-location-hint"
+        hint.textContent = "Unable to determine location. Click \u2018Build now\u2019 to generate locations or enable Autobuild."
+        inner.appendChild(hint)
       }
 
       return {el: child, severity, issue, jumps}
