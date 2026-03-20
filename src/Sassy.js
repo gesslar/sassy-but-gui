@@ -152,6 +152,7 @@ class Sassy {
         return
 
       theme.reset()
+      await theme.load()
       await theme.build()
       this.#eventProvider.fire("theme.built", uri, this.#glog.error)
     } catch(error) {
@@ -212,7 +213,7 @@ class Sassy {
             semanticTokenColors,
             relativePath: workspace.asRelativePath(uri),
             proof: theme.getProof(),
-            autoBuild: this.#autoBuildThemes.has(uri.fsPath) || false,
+            autoBuild: this.#autoBuildThemes.has(uri.fsPath),
             dirty,
           }
         })
