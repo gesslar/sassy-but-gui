@@ -7,7 +7,6 @@ const {postMessage} = vscode
 const {Notify} = TK
 
 class WebSassy {
-  // debugger
   #elements = {}
   #diagnostics = []
   #output = {}
@@ -119,8 +118,6 @@ class WebSassy {
 
   #aborter
   #setDirty(status, debounced=false) {
-    // debugger
-
     this.#aborter?.abort()
 
     if(!debounced) {
@@ -159,7 +156,6 @@ class WebSassy {
   }
 
   #updateThemeData(data) {
-    // debugger
     if(!data) {
       this.#elements.themeInfo.hidden = true
 
@@ -445,7 +441,6 @@ class WebSassy {
   }
 
   #applyDiagFilter(evt) {
-    // debugger
     const {target} = evt ?? {}
 
     console.log(TK.Data.typeOf(target ?? {}))
@@ -489,7 +484,6 @@ class WebSassy {
   }
 
   #resolveTypeChanged(ctx) {
-    // debugger
     const {target} = ctx
     const {value} = target
     const options = this.#getResolveOptions(value)
@@ -554,7 +548,6 @@ class WebSassy {
   }
 
   #updateResolveOptions(options) {
-    // debugger
     const {resolveKey} = this.#elements
     resolveKey.replaceChildren()
 
@@ -562,7 +555,6 @@ class WebSassy {
   }
 
   #doResolve(ctx) {
-    // debugger
     const {target} = ctx
 
     const resolveType = this.#elements.resolveType.value
@@ -721,10 +713,8 @@ class WebSassy {
       const label = prefix ? `${prefix}.${k}` : k
 
       if(isLeaf(v)) {
-        // debugger
         this.#appendSwatch(grid, template, k, v)
       } else {
-        // debugger
         this.#appendGroup(grid, template, v, label)
       }
     }
