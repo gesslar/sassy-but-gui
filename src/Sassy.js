@@ -614,7 +614,6 @@ class Sassy {
 
   async #buildThemeToDisk(explorerUri) {
     try {
-      // debugger
       const themeUri = explorerUri
         ?? window.activeTextEditor?.document.uri
 
@@ -708,7 +707,6 @@ class Sassy {
     let theme = this.#themeMap.get(uri.fsPath)
 
     if(!theme) {
-      // debugger
       theme = await this.#loadTheme(uri)
 
       if(!theme)
@@ -729,7 +727,6 @@ class Sassy {
 
   async #loadTheme(uri) {
     try {
-      // debugger
       const file = new FileObject(uri.fsPath)
       const theme = new Theme().setCache(this.#cache).setThemeFile(file)
 
