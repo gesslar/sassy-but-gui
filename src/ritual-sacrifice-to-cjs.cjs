@@ -37,7 +37,7 @@ async function deactivate() {
   if(!esm)
     return
 
-  esm.deactivate()
+  await esm.deactivate()
 }
 
 // VS Code expects CommonJS exports

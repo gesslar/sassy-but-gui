@@ -417,8 +417,10 @@ class Sassy {
         data = await resolver.semanticTokenColor(theme, key)
 
       const lookup = key => {
-        if(/^\^\(([^)]+)\)$/.test(key)) {
-          return `palette.${key.match(/^\^\(([^)]+)\)$/)[1]}`
+        const paletteMatch = key.match(/^\^\(([^)]+)\)$/)
+
+        if(paletteMatch) {
+          return `palette.${paletteMatch[1]}`
         } else if(/^\$(?!palette\.)/.test(key)) {
           return `vars.${key.slice(1)}`
         } else if(/^\$/.test(key)) {
@@ -691,7 +693,7 @@ class Sassy {
       return
 
     try {
-      this.#buildThemeToDisk(uri)
+      await this.#buildThemeToDisk(uri)
     } catch(error) {
       this.#glog.error(`Auto-build failed: ${error.message}`)
     }
