@@ -230,7 +230,10 @@ class WebSassy {
 
     ;["variables", "colors", "tokenColors", "semanticTokenColors"].forEach(category => {
       const group = document.createElement("vscode-tree-item")
-      group.textContent = category
+      const label = document.createElement("span")
+      label.className = "diag-category-label"
+      label.textContent = "ooOo" + category
+      group.appendChild(label)
 
       const issues = data[category] ?? []
       if(!issues.length) {
@@ -319,7 +322,7 @@ class WebSassy {
     const linkIcon = document.createElement("vscode-icon")
     linkIcon.actionIcon = true
     linkIcon.name = "open-in-product"
-    linkIcon.title = `Jump to issue.`
+    linkIcon.title = `Jump to issue`
     linkIcon.className = "jump-link"
     linkIcon.dataset.location = loc
     jumps.push(linkIcon)

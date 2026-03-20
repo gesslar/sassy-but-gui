@@ -23,6 +23,7 @@
   --text-mono-background: var(--vscode-textPreformat-background);
 }
 
+
 body {
   padding: 0;
   margin: 0;
@@ -107,6 +108,7 @@ main {
     border-radius: 0.2rem;
     vertical-align: middle;
     --vscode-icon-foreground: var(--vscode-editorLink-activeForeground);
+    color: var(--vscode-editorLink-activeForeground);
   }
 
   #main-tabs {
@@ -217,18 +219,18 @@ main {
       }
 
       vscode-tree {
-        // flex: 1;
         min-height: 0;
         overflow-y: auto;
         font-size: .9em;
+        --vscode-list-activeSelectionIconForeground: var(--vscode-icon-foreground);
       }
 
       /* Tree view card layout */
       #diag-list {
-        // display: flex;
-        // flex-direction: column;
-
         .diag-icon {
+          --vscode-icon-foreground: var(--vscode-editor-foreground);
+          color: var(--vscode-icon-foreground);
+
           &.info {
             --vscode-icon-foreground: var(--vscode-editorInfo-foreground);
           }
@@ -244,6 +246,7 @@ main {
 
         .diag-message {
           font-size: 1em;
+          color: var(--vscode-editor-foreground)
         }
 
         .diag-card {
@@ -267,6 +270,7 @@ main {
               gap: .8em;
 
               .diag-card-name {
+                color: var(--vscode-editor-foreground);
                 display: inline-block;
                 font-family: var(--font-family-mono);
               }
@@ -381,18 +385,37 @@ main {
           }
 
           .step-type {
-            --vscode-icon-foreground: var(--vscode-descriptionForeground);
-            background: var(--text-mono-background, rgba(128, 128, 128, 0.1));
             border-radius: 3px;
             padding: 3px;
             flex-shrink: 0;
+
+            &[title="expression"] {
+              --vscode-icon-foreground: var(--vscode-terminal-ansiBlue);
+            }
+
+            &[title="variable"] {
+              --vscode-icon-foreground: var(--vscode-terminal-ansiCyan);
+            }
+
+            &[title="literal"] {
+              --vscode-icon-foreground: var(--vscode-terminal-ansiYellow);
+            }
+
+            &[title="normalised"],
+            &[title="resolved"] {
+              --vscode-icon-foreground: var(--vscode-terminal-ansiGreen);
+            }
+
+            &[title="séance"] {
+              --vscode-icon-foreground: var(--vscode-terminal-ansiMagenta);
+            }
           }
 
           .step-value {
             flex: 1;
             word-break: break-all;
             font-family: var(--vscode-editor-font-family);
-            color: var(--text-mono-foreground, var(--vscode-editor-foreground));
+            color: var(--vscode-editor-foreground);
           }
 
           .step-link {
