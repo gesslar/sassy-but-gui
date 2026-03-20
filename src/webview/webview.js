@@ -312,7 +312,7 @@ class WebSassy {
     return {child, inner, severity, jumps}
   }
 
-  #createLocationRow(loc, jumps, container) {
+  #createLocationRow(loc, jumps, container, label) {
     const locationRow = document.createElement("div")
     locationRow.className = "diag-card-location-row"
     container.append(locationRow)
@@ -327,6 +327,13 @@ class WebSassy {
     linkIcon.dataset.location = loc
     jumps.push(linkIcon)
     locationRow.appendChild(linkIcon)
+
+    if(label) {
+      const pill = document.createElement("span")
+      pill.className = "diag-card-location-pill"
+      pill.textContent = label
+      locationRow.appendChild(pill)
+    }
 
     const {file, line, column} =
       /^(?<file>.*):(?<line>\d+):(?<column>\d+)$/.exec(loc)?.groups ?? {}
@@ -390,9 +397,13 @@ class WebSassy {
         property.appendChild(swatch)
       }
 
+      if(issue.sourceLocation) {
+        this.#createLocationRow(issue.sourceLocation, jumps, inner, "SOURCE")
+      }
+
       if(issue.location) {
-        this.#createLocationRow(issue.location, jumps, inner)
-      } else if(dirty) {
+        this.#createLocationRow(issue.location, jumps, inner, "THEME")
+      } else if(!issue.sourceLocation && dirty) {
         const hint = document.createElement("div")
         hint.className = "diag-card-location-hint"
         hint.textContent = "Unable to determine location. Click \u2018Build now\u2019 to generate locations or enable Autobuild."

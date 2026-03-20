@@ -238,22 +238,35 @@ class Sassy {
       const dirty = theme.canWrite() && await theme.wouldWrite()
       const colors = lint.colors ?? []
 
-      if(!dirty && colors.length) {
-        const outputFile = theme.getOutputFile()
+      if(colors.length) {
+        for(const issue of colors) {
+          const schema = this.#schema.map.get(issue.property)
+          const target = !schema || schema.deprecationMessage
+            ? "key"
+            : "value"
 
-        if(outputFile) {
-          const source = await JsonSource.fromFile(outputFile)
+          issue.sourceLocation = theme.findSourceLocation(
+            `theme.colors.${issue.property}`, target
+          )
+        }
 
-          if(source) {
-            for(const issue of colors) {
-              const schema = this.#schema.map.get(issue.property)
-              const target = !schema || schema.deprecationMessage
-                ? "key"
-                : "value"
+        if(!dirty) {
+          const outputFile = theme.getOutputFile()
 
-              issue.location = source.formatLocation(
-                `colors.${issue.property}`, target
-              )
+          if(outputFile) {
+            const source = await JsonSource.fromFile(outputFile)
+
+            if(source) {
+              for(const issue of colors) {
+                const schema = this.#schema.map.get(issue.property)
+                const target = !schema || schema.deprecationMessage
+                  ? "key"
+                  : "value"
+
+                issue.location = source.formatLocation(
+                  `colors.${issue.property}`, target
+                )
+              }
             }
           }
         }
