@@ -309,6 +309,11 @@ main {
                 vertical-align: middle;
               }
             }
+
+            .diag-card-location-hint {
+              font-style: italic;
+              color: var(--vscode-descriptionForeground);
+            }
           }
         }
       }

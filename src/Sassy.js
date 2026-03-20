@@ -4,7 +4,7 @@ import * as vscode from "vscode"
 
 import EventService from "./EventService.js"
 import SassyPanel from "./SassyPanel.js"
-import {Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
+import {JsonSource, Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 
 const {commands, window, workspace} = vscode
 const {Range, Selection, TabInputText, Uri, ViewColumn} = vscode
@@ -236,6 +236,28 @@ class Sassy {
         return
 
       const dirty = theme.canWrite() && await theme.wouldWrite()
+      const colors = lint.colors ?? []
+
+      if(!dirty && colors.length) {
+        const outputFile = theme.getOutputFile()
+
+        if(outputFile) {
+          const source = await JsonSource.fromFile(outputFile)
+
+          if(source) {
+            for(const issue of colors) {
+              const schema = this.#schema.map.get(issue.property)
+              const target = !schema || schema.deprecationMessage
+                ? "key"
+                : "value"
+
+              issue.location = source.formatLocation(
+                `colors.${issue.property}`, target
+              )
+            }
+          }
+        }
+      }
 
       this.#getPanelForTheme(uri)?.postMessage({
         type: "diagnostics",
@@ -245,7 +267,7 @@ class Sassy {
           variables: lint.variables ?? [],
           tokenColors: this.#flattenTokenColorIssues(lint.tokenColors ?? []),
           semanticTokenColors: lint.semanticTokenColors ?? [],
-          colors: lint.colors ?? [],
+          colors,
         }
       })
 
@@ -354,7 +376,6 @@ class Sassy {
     if(!theme)
       return
 
-    await this.#sendThemeData(uri)
     this.#eventProvider.fire("file.loaded", uri, this.#glog.error)
   }
 
@@ -606,7 +627,8 @@ class Sassy {
         data: {success: true, message}
       })
 
-      this.#sendThemeData(themeUri)
+      if(result.status === WriteStatus.WRITTEN)
+        this.#lint(themeUri)
     } catch(error) {
       const uri = explorerUri ?? window.activeTextEditor?.document.uri
 
