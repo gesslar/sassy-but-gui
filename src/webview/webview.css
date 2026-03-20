@@ -508,7 +508,7 @@ main {
         overflow: auto;
         background: var(--vscode-editor-background);
         font-family: var(--vscode-editor-font-family);
-        font-size: calc(var(--vscode-editor-font-size), 0.85);
+        font-size: calc(var(--vscode-editor-font-size) * 0.85);
         line-height: 1.5;
         color: var(--vscode-editor-foreground);
         white-space: pre;

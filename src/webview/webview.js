@@ -90,7 +90,7 @@ class WebSassy {
 
     if(data.success === false)
       console.error(
-        data.error?.message
+        data.message
         ??
         "A unknown problem occurred during theme compilation."
       )
@@ -632,7 +632,7 @@ class WebSassy {
     // Final resolution
     const final = this.#elements.resolveFinal
 
-    final.innerHTML = ""
+    final.replaceChildren()
 
     const keyLabel = document.createElement("span")
     keyLabel.className = "resolve-final-key"
@@ -687,7 +687,7 @@ class WebSassy {
 
     const grid = this.#elements.paletteGrid
 
-    grid.innerHTML = ""
+    grid.replaceChildren()
 
     const template = document.getElementById("palette-swatch-template")
 
