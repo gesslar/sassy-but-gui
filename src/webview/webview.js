@@ -44,11 +44,11 @@ class WebSassy {
 
     // Building things
     const {
-      switchAutobuild,
+      btnAutobuild,
       btnBuild
     } = this.#elements
 
-    Notify.on("change", evt => postMessage({type: "toggleAutoBuild", enabled: evt.target.checked}), switchAutobuild)
+    Notify.on("change", evt => this.#toggleAutobuild(evt), btnAutobuild)
     Notify.on("click", () => postMessage({type: "requestBuild"}), btnBuild)
 
     // Messages from extension
@@ -149,6 +149,15 @@ class WebSassy {
     }
   }
 
+  #toggleAutobuild(evt) {
+    const {target} = evt ?? {}
+
+    if(!target)
+      return
+
+    postMessage({type: "toggleAutoBuild", enabled: target.checked})
+  }
+
   #updateThemeData(data) {
     // debugger
     if(!data) {
@@ -158,9 +167,8 @@ class WebSassy {
     }
 
     this.#elements.themeInfo.hidden = false
-
     this.#elements.themePath.textContent = data.relativePath || ""
-    this.#elements.switchAutobuild.checked = !!data.autoBuild
+    this.#elements.btnAutobuild.checked = data.autoBuild
 
     this.#output = {
       colors: data.colors,
@@ -169,8 +177,22 @@ class WebSassy {
     }
 
     const resolveType = this.#elements.resolveType.value || "colors"
+    const previousKey = this.#elements.resolveKey.value?.trim()
+
     const options = this.#getResolveOptions(resolveType)
     this.#updateResolveOptions(options)
+
+    if(previousKey) {
+      requestAnimationFrame(() => {
+        const keySelect = this.#elements.resolveKey
+        const idx = options.findIndex(o => o.value === previousKey)
+
+        if(idx >= 0) {
+          keySelect.selectedIndex = idx
+          vscode.postMessage({type: "requestResolve", resolveType, key: previousKey})
+        }
+      })
+    }
 
     this.#setDirty(data.dirty)
   }
@@ -544,9 +566,6 @@ class WebSassy {
 
     this.#elements.resolveResult.hidden = false
 
-    this.#elements.resolveResultTitle.textContent =
-      `Resolution: ${data.key || ""}`
-
     const template = document.getElementById("resolve-step-template")
 
     if(data.trail?.length) {
@@ -554,9 +573,22 @@ class WebSassy {
         const clone = template.content.cloneNode(true)
         const el = clone.querySelector(".resolve-step")
 
-        el.style.paddingLeft = `${(step.depth ?? 0) * 1}rem`
+        const depth = step.depth ?? 0
+        el.style.paddingLeft = `${0.6 + depth * 1}rem`
 
-        el.querySelector(".step-type").textContent = step.type || ""
+        const typeIcons = {
+          expression: "symbol-method",
+          variable: "symbol-variable",
+          literal: "symbol-constant",
+          normalised: "check",
+          resolved: "check",
+          "séance": "references",
+        }
+
+        const typeEl = el.querySelector(".step-type")
+        typeEl.name = typeIcons[step.type] ?? "question"
+        typeEl.title = step.type || ""
+
         el.querySelector(".step-value").textContent = step.value || ""
 
         if(step.location) {
@@ -587,12 +619,21 @@ class WebSassy {
 
     final.innerHTML = ""
 
+    const keyLabel = document.createElement("span")
+    keyLabel.className = "resolve-final-key"
+    keyLabel.textContent = data.key || ""
+    final.appendChild(keyLabel)
+
     if(data.resolution) {
-      const label = document.createElement("span")
+      const arrow = document.createElement("span")
+      arrow.className = "resolve-final-arrow"
+      arrow.textContent = "\u2192"
+      final.appendChild(arrow)
 
-      label.textContent = data.resolution
-
-      final.appendChild(label)
+      const value = document.createElement("span")
+      value.className = "resolve-final-value"
+      value.textContent = data.resolution
+      final.appendChild(value)
 
       if(isHexColor(data.resolution)) {
         const swatch = document.createElement("span")

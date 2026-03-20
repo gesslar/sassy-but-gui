@@ -23,14 +23,14 @@
 
     <div id="theme-info">
       <vscode-toolbar-container>
-        <div>
-          <span class="dirty-theme">
-            <vscode-toolbar-button id="btn-build" icon="edit-code" label="Build theme">
-              Build theme
-            </vscode-toolbar-button>
-          </span>
-          <vscode-checkbox toggle id="switch-autobuild">Auto-build on change</vscode-checkbox>
-        </div>
+        <span class="dirty-theme">
+          <vscode-toolbar-button id="btn-build" label="Build theme">
+            Build now
+          </vscode-toolbar-button>
+        </span>
+        <vscode-toolbar-button id="btn-autobuild" icon="edit-code" label="Build theme" toggleable>
+          Autobuild
+        </vscode-toolbar-button>
       </vscode-toolbar-container>
 
       <div id="theme-header">
@@ -86,21 +86,20 @@
         <div id="view-resolve" class="tab-panel">
 
           <div class="resolve-form" hidden>
-            <vscode-toolbar-container>
+            <div class="resolve-type-wrap">
               <vscode-single-select id="resolve-type" defaultValue="colors">
                 <vscode-option value="colors" selected>Color</vscode-option>
                 <vscode-option value="tokenColors">Token Color</vscode-option>
                 <vscode-option value="semanticTokenColors">Semantic Token Color</vscode-option>
               </vscode-single-select>
-
+            </div>
+            <div class="resolve-key-wrap">
               <vscode-single-select id="resolve-key" filter="contains" combobox>
               </vscode-single-select>
-
-            </vscode-toolbar-container>
+            </div>
           </div>
 
           <div id="resolve-result" hidden>
-            <h3 id="resolve-result-title">Resolution</h3>
             <div id="resolve-final" class="resolve-final"></div>
             <div id="resolve-trail"></div>
           </div>
@@ -171,7 +170,7 @@
 
   <template id="resolve-step-template">
     <div class="resolve-step">
-      <span class="step-type"></span>
+      <vscode-icon class="step-type"></vscode-icon>
       <span class="step-value"></span>
       <span class="step-link"></span>
       <span class="step-swatch"></span>
