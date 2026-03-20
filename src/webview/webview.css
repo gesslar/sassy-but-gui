@@ -412,7 +412,7 @@ main {
             }
 
             &[title="séance"] {
-              --vscode-icon-foreground: var(--vscode-terminal-ansiMagenta);
+              --vscode-icon-foreground: var(--vscode-terminal-ansiBrightCyan);
             }
           }
 
