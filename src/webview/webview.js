@@ -155,15 +155,19 @@ class WebSassy {
   }
 
   #updateThemeData(data) {
+    const {themeInfo} = this.#elements
+
     if(!data) {
-      this.#elements.themeInfo.hidden = true
+      themeInfo.hidden = true
 
       return
     }
 
-    this.#elements.themeInfo.hidden = false
-    this.#elements.themePath.textContent = data.relativePath || ""
-    this.#elements.btnAutobuild.checked = data.autoBuild
+    const {themePath, btnAutobuild} = this.#elements
+
+    themeInfo.hidden = false
+    themePath.textContent = data.relativePath || ""
+    btnAutobuild.checked = data.autoBuild
 
     this.#output = {
       colors: data.colors,
@@ -279,8 +283,6 @@ class WebSassy {
 
       container.appendChild(group)
     })
-
-    // this.#elements.diagEmpty.removeAttribute("hidden")
   }
 
   #createDiagScaffold(issue, labelText) {
