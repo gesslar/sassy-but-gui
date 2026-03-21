@@ -71,23 +71,23 @@ class Sassy {
 
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
 
-    this.#eventProvider.on("theme.built", async ctx => {
+    this.#eventProvider.on("theme.built", ctx => {
       Time.cancel(this.#builtDebounce)
 
-      this.#builtDebounce = await Time.after(30, () => {
-        this.#sendPaletteData(ctx)
-        this.#sendProof(ctx)
-        this.#autoBuildToDisk(ctx)
-        this.#lint(ctx)
+      this.#builtDebounce = Time.after(30, async() => {
+        await this.#sendPaletteData(ctx)
+        await this.#sendProof(ctx)
+        await this.#autoBuildToDisk(ctx)
+        await this.#lint(ctx)
       })
     })
 
-    this.#eventProvider.on("theme.linted", async ctx => {
+    this.#eventProvider.on("theme.linted", ctx => {
       Time.cancel(this.#lintedDebounce)
 
-      this.#lintedDebounce = await Time.after(30, () => {
-        this.#sendThemeData(ctx.uri)
-        this.#sendDiagnostics(ctx)
+      this.#lintedDebounce = Time.after(30, async() => {
+        await this.#sendThemeData(ctx.uri)
+        await this.#sendDiagnostics(ctx)
       })
     })
   }
