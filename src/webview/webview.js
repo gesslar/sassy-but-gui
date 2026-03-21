@@ -692,6 +692,8 @@ class WebSassy {
   }
 
   #showPalette(data) {
+    debugger
+
     if(!data?.colors) {
       this.#elements.paletteEmpty.hidden = false
       this.#elements.paletteGrid.hidden = true

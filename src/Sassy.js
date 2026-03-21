@@ -1,9 +1,8 @@
 import {Lint, Resolve, Theme, WriteStatus} from "@gesslar/sassy"
-import {Cache, Data, FileObject, FileSystem as FS, Glog, Sass, Time} from "@gesslar/toolkit"
+import {Cache, Data, FileObject, FileSystem as FS, Glog, NotifyClass, Sass, Time} from "@gesslar/toolkit"
 import {JsonSource, Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 import * as vscode from "vscode"
 
-import EventService from "./EventService.js"
 import SassyPanel from "./SassyPanel.js"
 
 const {commands, window, workspace} = vscode
@@ -15,7 +14,7 @@ class Sassy {
   #context
   /** @type {Glog} */
   #glog
-  /** @type {EventService} */
+  /** @type {NotifyClass} */
   #eventProvider
   /** @type {Map<string, SassyPanel>} */
   #panels = new Map()
@@ -52,7 +51,7 @@ class Sassy {
     })
 
     this.#schema = await VSCodeSchema.new()
-    this.#eventProvider = new EventService({glog: this.#glog})
+    this.#eventProvider = new NotifyClass({glog: this.#glog})
 
     context.subscriptions.push(
       commands.registerCommand("sassy.showPanel",
@@ -340,9 +339,9 @@ class Sassy {
         return
 
       const pool = theme.getPool()
-      const tokens = pool.getTokens().entries().filter(([name, _]) => {
+      const tokens = pool.getTokens().entries().filter(([name, _]) =>
         name.startsWith("palette.") && !name.includes("__prior__")
-      })
+      )
       const resolvedPalette = {}
 
       for(const [name, token] of tokens) {
@@ -350,7 +349,9 @@ class Sassy {
         Data.setNestedValue(resolvedPalette, key.split("."), {raw: token.getRawValue(), value: token.getValue()})
       }
 
-      this.#getPanelForTheme(uri)?.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
+      this.#getPanelForTheme(uri)
+        ?.postMessage({type: "paletteData", data: {colors: resolvedPalette}})
+
     } catch(error) {
       this.#glog.error(error, error.stack)
     }
