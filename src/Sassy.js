@@ -27,6 +27,8 @@ class Sassy {
   #autoBuildThemes = new Set()
   /** @type {Cache} */
   #cache = new Cache()
+  /** @type {Set<string>} Paths to ignore watcher events for during autobuild writes. */
+  #suppressedWatchPaths = new Set()
   #schema
 
   #sassyFileExtension = ".sassy.yaml"
@@ -389,7 +391,7 @@ class Sassy {
     if(!theme)
       return
 
-    this.#eventProvider.fire("file.loaded", uri, this.#glog.error)
+    await this.#eventProvider.asyncEmit("file.loaded", uri)
   }
 
   /**
@@ -523,14 +525,17 @@ class Sassy {
 
       const watcher = workspace.createFileSystemWatcher(depPath)
 
-      watcher.onDidChange(() => {
+      watcher.onDidChange(async() => {
+        if(this.#suppressedWatchPaths.has(depPath))
+          return
+
         const entry = this.#watchers.get(depPath)
 
         if(!entry)
           return
 
         for(const tp of entry.themes)
-          this.#eventProvider.fire("file.loaded", Uri.file(tp), this.#glog.error)
+          await this.#eventProvider.asyncEmit("file.loaded", Uri.file(tp))
       })
 
       this.#watchers.set(depPath, {watcher, themes: new Set([themePath])})
@@ -697,10 +702,32 @@ class Sassy {
     if(!theme?.canWrite())
       return
 
+    const outputPath = theme.getOutputFile()?.path
+
     try {
-      await this.#buildThemeToDisk(uri)
+      if(outputPath)
+        this.#suppressedWatchPaths.add(outputPath)
+
+      const result = await theme.write()
+
+      this.#getPanelForTheme(uri)?.postMessage({
+        type: "buildStatus",
+        data: {
+          success: true,
+          message: result.status === WriteStatus.SKIPPED
+            ? "No changes to write"
+            : `Built to ${result.file.path}`,
+        }
+      })
     } catch(error) {
       this.#glog.error(`Auto-build failed: ${error.message}`)
+      this.#getPanelForTheme(uri)?.postMessage({
+        type: "buildStatus",
+        data: {success: false, message: error.message}
+      })
+    } finally {
+      if(outputPath)
+        this.#suppressedWatchPaths.delete(outputPath)
     }
   }
 
