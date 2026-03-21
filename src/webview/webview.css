@@ -181,39 +181,27 @@ main {
           min-width: 200px;
 
           vscode-toolbar-button {
-            margin: 0.2em;
+            margin: 0.1em;
             border-radius: 0.3em;
             border: 1px solid transparent;
 
             &[icon="info"][checked] {
-              --vscode-icon-foreground: var(--vscode-inputValidation-infoForeground);
-              background-color: var(--vscode-inputValidation-infoBackground);
-              border-color: var(--vscode-inputValidation-infoBorder)
+              --vscode-inputOption-activeForeground: var(--vscode-inputValidation-infoForeround);
+              --vscode-inputOption-activeBackground: var(--vscode-inputValidation-infoBackground);
+              --vscode-inputOption-activeBorder: var(--vscode-inputValidation-infoBorder)
             }
 
             &[icon="warning"][checked] {
-              --vscode-icon-foreground: var(--vscode-inputValidation-warningForeground);
-              background-color: var(--vscode-inputValidation-warningBackground);
-              border-color: var(--vscode-inputValidation-warningBorder)
+              --vscode-inputOption-activeForeground: var(--vscode-inputValidation-warningForeround);
+              --vscode-inputOption-activeBackground: var(--vscode-inputValidation-warningBackground);
+              --vscode-inputOption-activeBorder: var(--vscode-inputValidation-warningBorder)
             }
 
             &[icon="error"][checked] {
-              --vscode-icon-foreground: var(--vscode-inputValidation-errorForeground);
-              background-color: var(--vscode-inputValidation-errorBackground);
-              border-color: var(--vscode-inputValidation-errorBorder)
+              --vscode-inputOption-activeForeground: var(--vscode-inputValidation-errorForeround);
+              --vscode-inputOption-activeBackground: var(--vscode-inputValidation-errorBackground);
+              --vscode-inputOption-activeBorder: var(--vscode-inputValidation-errorBorder)
             }
-          }
-        }
-      }
-
-      #diag-empty {
-        .hero-icon {
-          font-size: 48px;
-          opacity: 0.4;
-
-          &.success {
-            color: var(--vscode-charts-green, var(--vscode-testing-iconPassed));
-            opacity: 0.7;
           }
         }
       }

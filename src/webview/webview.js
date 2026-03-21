@@ -28,9 +28,9 @@ class WebSassy {
     } = this.#elements
 
     Notify.on("input", evt => this.#applyDiagFilter(evt), diagFilter)
-    Notify.on("click", evt => this.#applyDiagFilter(evt), filterErrors)
-    Notify.on("click", evt => this.#applyDiagFilter(evt), filterWarnings)
-    Notify.on("click", evt => this.#applyDiagFilter(evt), filterInfo)
+    Notify.on("change", evt => this.#applyDiagFilter(evt), filterErrors)
+    Notify.on("change", evt => this.#applyDiagFilter(evt), filterWarnings)
+    Notify.on("change", evt => this.#applyDiagFilter(evt), filterInfo)
 
     const {
       resolveKey,
@@ -202,9 +202,30 @@ class WebSassy {
     })
   }
 
+  #snapshotDiagOpenState() {
+    const state = new Map()
+    const container = this.#elements.diagList
+
+    for(const group of container.children) {
+      const label = group.querySelector(".diag-category-label")?.textContent
+
+      if(!label)
+        continue
+
+      state.set(label, group.open)
+
+      for(const child of group.querySelectorAll(":scope > vscode-tree-item"))
+        state.set(`${label}:${child.querySelector(".diag-message")?.textContent}`, child.open)
+    }
+
+    return state
+  }
+
   #updateDiagnostics(data) {
     if(!data)
       return
+
+    const openState = this.#snapshotDiagOpenState()
 
     this.#diagnostics = []
 
@@ -238,7 +259,7 @@ class WebSassy {
       }
 
       group.branch = true
-      group.open = true
+      group.open = openState.has(category) ? openState.get(category) : true
 
       const groupCount = document.createElement("vscode-badge")
       groupCount.variant = "counter"
@@ -247,6 +268,11 @@ class WebSassy {
 
       const children = generators[category](issues)
       children.forEach(({el, severity, issue, jumps}) => {
+        const itemKey = `${category}:${el.querySelector(".diag-message")?.textContent}`
+
+        if(openState.has(itemKey))
+          el.open = openState.get(itemKey)
+
         group.appendChild(el)
         this.#diagnostics.push({el, severity, issue})
         jumps.forEach(jump =>
