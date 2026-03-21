@@ -55,21 +55,16 @@
 
                 <vscode-textfield id="diag-filter" label="Filter" type="text"
                   placeholder="Filter by message or location">
-                  <vscode-toolbar-button id="filter-errors" slot="content-after" icon="error"
+                  <vscode-toolbar-button toggleable id="filter-errors" slot="content-after" icon="error"
                     checked></vscode-toolbar-button>
-                  <vscode-toolbar-button id="filter-warnings" slot="content-after" icon="warning"
+                  <vscode-toolbar-button toggleable id="filter-warnings" slot="content-after" icon="warning"
                     checked></vscode-toolbar-button>
-                  <vscode-toolbar-button id="filter-info" slot="content-after" icon="info"
+                  <vscode-toolbar-button toggleable id="filter-info" slot="content-after" icon="info"
                     checked></vscode-toolbar-button>
                 </vscode-textfield>
 
               </vscode-toolbar-container>
             </div>
-
-            <!-- <div id="diag-empty" class="empty-state">
-              <i class="codicon codicon-pass hero-icon success"></i>
-              <p>No diagnostics to show.</p>
-            </div> -->
 
             <vscode-tree id="diag-list" expandMode="doubleClick">
             </vscode-tree>

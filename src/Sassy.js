@@ -75,11 +75,11 @@ class Sassy {
     )
 
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
+    this.#eventProvider.on("theme.built", ctx => this.#autoBuildToDisk(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#lint(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#sendPaletteData(ctx))
     this.#eventProvider.on("theme.built", ctx => this.#sendProof(ctx))
     this.#eventProvider.on("theme.linted", ctx => {
-      this.#autoBuildToDisk(ctx.uri)  // build if necessary
       this.#sendThemeData(ctx.uri)    // send the theme data
       this.#sendDiagnostics(ctx)  // send the diags
     })
@@ -154,7 +154,7 @@ class Sassy {
       theme.reset()
       await theme.load()
       await theme.build()
-      this.#eventProvider.fire("theme.built", uri, this.#glog.error)
+      await this.#eventProvider.asyncEmit("theme.built", uri)
     } catch(error) {
       this.#glog.error(error, error.stack)
     }
