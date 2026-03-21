@@ -40,7 +40,7 @@ async function deactivate() {
   await esm.deactivate()
 }
 
-// VS Code expects CommonJS exports
+// VS Code expects CommonJS exports.
 module.exports = {
   activate,
   deactivate

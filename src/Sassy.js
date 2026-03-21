@@ -1,10 +1,10 @@
 import {Lint, Resolve, Theme, WriteStatus} from "@gesslar/sassy"
-import {Cache, Data, FileObject, FileSystem as FS, Glog, Sass} from "@gesslar/toolkit"
+import {Cache, Data, FileObject, FileSystem as FS, Glog, Sass, Time} from "@gesslar/toolkit"
+import {JsonSource, Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 import * as vscode from "vscode"
 
 import EventService from "./EventService.js"
 import SassyPanel from "./SassyPanel.js"
-import {JsonSource, Validator, VSCodeSchema} from "@gesslar/vscode-theme-schema"
 
 const {commands, window, workspace} = vscode
 const {Range, Selection, TabInputText, Uri, ViewColumn} = vscode
@@ -29,10 +29,13 @@ class Sassy {
   #cache = new Cache()
   /** @type {Set<string>} Paths to ignore watcher events for during autobuild writes. */
   #suppressedWatchPaths = new Set()
+  /** @type {VSCodeSchema} */
   #schema
-
   #sassyFileExtension = ".sassy.yaml"
   #sassyFileExtensionRegex = new RegExp(`${this.#sassyFileExtension.replaceAll(/\./g, "\\.")}$`)
+
+  #builtDebounce
+  #lintedDebounce
 
   /**
    * Activates the Sassy extension.
@@ -64,26 +67,28 @@ class Sassy {
       commands.registerCommand("sassy.disableAutoBuild",
         () => this.#setAutoBuild(window.activeTextEditor?.document.uri, false)
       ),
-
-      // workspace.onDidOpenTextDocument(
-      //   async ctx => await this.#documentOpened(ctx)
-      // ),
-      // workspace.onDidCloseTextDocument(
-      //   async ctx => await this.#documentClosed(ctx)
-      // ),
-      // window.onDidChangeActiveTextEditor(
-      //   () => this.#updateAutoBuildContext()
-      // ),
     )
 
     this.#eventProvider.on("file.loaded", ctx => this.#build(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#autoBuildToDisk(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#lint(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#sendPaletteData(ctx))
-    this.#eventProvider.on("theme.built", ctx => this.#sendProof(ctx))
-    this.#eventProvider.on("theme.linted", ctx => {
-      this.#sendThemeData(ctx.uri)    // send the theme data
-      this.#sendDiagnostics(ctx)  // send the diags
+
+    this.#eventProvider.on("theme.built", async ctx => {
+      Time.cancel(this.#builtDebounce)
+
+      this.#builtDebounce = await Time.after(30, () => {
+        this.#sendPaletteData(ctx)
+        this.#sendProof(ctx)
+        this.#autoBuildToDisk(ctx)
+        this.#lint(ctx)
+      })
+    })
+
+    this.#eventProvider.on("theme.linted", async ctx => {
+      Time.cancel(this.#lintedDebounce)
+
+      this.#lintedDebounce = await Time.after(30, () => {
+        this.#sendThemeData(ctx.uri)
+        this.#sendDiagnostics(ctx)
+      })
     })
   }
 
@@ -127,6 +132,7 @@ class Sassy {
     })
 
     this.#panels.set(uri.fsPath, panel)
+
     await panel.show()
   }
 
@@ -334,7 +340,9 @@ class Sassy {
         return
 
       const pool = theme.getPool()
-      const tokens = pool.getTokens().entries().filter(([name, _]) => name.startsWith("palette.") && !name.includes("__prior__"))
+      const tokens = pool.getTokens().entries().filter(([name, _]) => {
+        name.startsWith("palette.") && !name.includes("__prior__")
+      })
       const resolvedPalette = {}
 
       for(const [name, token] of tokens) {
@@ -448,7 +456,6 @@ class Sassy {
       })
     } catch(error) {
       this.#glog.error(error, error.stack)
-      this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
 
@@ -470,7 +477,6 @@ class Sassy {
       })
     } catch(error) {
       this.#glog.error(error, error.stack)
-      this.#getPanelForTheme(uri)?.postMessage({type: "error", message: error.message})
     }
   }
 
@@ -586,41 +592,6 @@ class Sassy {
       this.#glog.error(
         `Failed to navigate to location: ${error.message}`
       )
-    }
-  }
-
-  /**
-   * Fired when a document is opened.
-   *
-   * @param {vscode.TextDocument} document
-   */
-  async #documentOpened(document) {
-    try {
-      if(!this.#isSassyDefinitionFile(document.uri))
-        return
-
-      await this.#ensureTheme(document.uri)
-
-      this.#autoBuildThemes.add(document.uri.fsPath)
-      this.#updateAutoBuildContext()
-      this.#eventProvider.fire("file.loaded", document.uri, this.#glog.error)
-    } catch(error) {
-      this.#glog.error(error, error.stack)
-    }
-  }
-
-  async #documentClosed(document) {
-    try {
-      if(!this.#isSassyDefinitionFile(document.uri))
-        return
-
-      const filePath = document.uri.fsPath
-
-      this.#stopWatching(filePath)
-      this.#themeMap.delete(filePath)
-      this.#autoBuildThemes.delete(filePath)
-    } catch(error) {
-      this.#glog.error(error, error.stack)
     }
   }
 
