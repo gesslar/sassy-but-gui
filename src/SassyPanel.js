@@ -123,6 +123,7 @@ export default class SassyPanel {
    * Disposes the panel and cleans up.
    */
   dispose() {
+    this.#panel?.dispose()
     this.#panel = null
 
     if(this.#onDispose)
