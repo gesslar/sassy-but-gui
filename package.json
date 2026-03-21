@@ -5,10 +5,6 @@
   "version": "0.1.0",
   "description": "Sassy but GUI",
   "main": "./src/ritual-sacrifice-to-cjs.cjs",
-  "activationEvents": [
-    "onStartupFinished",
-    "onLanguage:yaml"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gesslar/sassy-but-gui.git"
@@ -18,7 +14,18 @@
     "Other",
     "Themes"
   ],
-  "keywords": [],
+  "icon": "resources/double-s.png",
+  "keywords": [
+    "theme",
+    "color-theme",
+    "vscode-theme",
+    "theme-builder",
+    "theme-generator",
+    "color",
+    "customization",
+    "yaml",
+    "sassy"
+  ],
   "author": {
     "name": "gesslar",
     "url": "https://github.com/gesslar/sassy-but-gui"
@@ -29,7 +36,7 @@
     "update": "npx npm-check-updates -u && npm install",
     "pr": "gt submit -p --ai",
     "lint": "eslint src/",
-    "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix",
+    "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix/",
     "publish:vsce": "npm run package && xdg-open https://marketplace.visualstudio.com/manage/publishers/gesslar",
     "publish:ovsx": "npm run package && xdg-open https://open-vsx.org/user-settings/extensions",
     "patch": "npm version patch",

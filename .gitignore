@@ -6,7 +6,6 @@ temp/
 .vscode/
 work/
 .claude/
-vsix/
 output/
 backup/
 fixtures/
