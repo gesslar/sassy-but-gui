@@ -74,7 +74,7 @@ class Sassy {
     this.#eventProvider.on("theme.built", ctx => {
       Time.cancel(this.#builtDebounce)
 
-      this.#builtDebounce = Time.after(30, async() => {
+      this.#builtDebounce = Time.after(100, async() => {
         await this.#sendPaletteData(ctx)
         await this.#sendProof(ctx)
         await this.#autoBuildToDisk(ctx)
@@ -85,7 +85,7 @@ class Sassy {
     this.#eventProvider.on("theme.linted", ctx => {
       Time.cancel(this.#lintedDebounce)
 
-      this.#lintedDebounce = Time.after(30, async() => {
+      this.#lintedDebounce = Time.after(100, async() => {
         await this.#sendThemeData(ctx.uri)
         await this.#sendDiagnostics(ctx)
       })
