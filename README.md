@@ -184,28 +184,3 @@ licenses:
 | [@vscode-elements/elements](https://github.com/vscode-elements/elements) | MIT |
 | [@vscode/codicons](https://github.com/microsoft/vscode-codicons) | CC-BY-4.0 |
 | [@vscode/vsce](https://github.com/Microsoft/vsce) | MIT |
-
-## Post Malone
-
-I didn't want to waste this gold.
-
-### Pedigree
-
-Built upon the wildly successful *sassy* platform, *Sassy, but GUI* extends
-theme authorship from the ... well, to nerds it's a CLI, what do not-nerds call
-it? Black box? That sounds, ok, both scary but also accurate in every sense if
-you're not a nerd. Anyway, so the black boxy way of making themes? It's now in
-clicky clicky format.
-
-*Sassy* does require a bit of information to learn how to use it. But, it's
-okay! I called in my best friends; my sherpa, my Wakko figurine, and we've all
-agreed to help you learn everything you'll need to know at sassy's website. And
-if you'd like, we can even hold hands while doing it.
-
-It's right here: <https://sassy.gesslar.io/>.
-
-It has a tutorial, things to know about VS Code and themes, also, it's *pink*.
-And, we don't *have* to hold hands if you don't want to. I'll understand. My
-sherpa'll understand. Wakko? You're on your own with Wakko.
-
-This might not be what pedigree means.
