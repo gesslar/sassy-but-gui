@@ -252,33 +252,30 @@ class WebSassy {
       group.appendChild(label)
 
       const issues = data[category] ?? []
-      if(!issues.length) {
-        group.branch = false
 
-        return
+      if(issues.length) {
+        group.branch = true
+        group.open = openState.has(category) ? openState.get(category) : true
+
+        const groupCount = document.createElement("vscode-badge")
+        groupCount.variant = "counter"
+        groupCount.textContent = issues.length
+        group.appendChild(groupCount)
+
+        const children = generators[category](issues)
+        children.forEach(({el, severity, issue, jumps}) => {
+          const itemKey = `${category}:${el.querySelector(".diag-message")?.textContent}`
+
+          if(openState.has(itemKey))
+            el.open = openState.get(itemKey)
+
+          group.appendChild(el)
+          this.#diagnostics.push({el, severity, issue})
+          jumps.forEach(jump =>
+            this.#diagnosticDisposer.register(Notify.on("click", () => this.#jump(jump), jump))
+          )
+        })
       }
-
-      group.branch = true
-      group.open = openState.has(category) ? openState.get(category) : true
-
-      const groupCount = document.createElement("vscode-badge")
-      groupCount.variant = "counter"
-      groupCount.textContent = issues.length
-      group.appendChild(groupCount)
-
-      const children = generators[category](issues)
-      children.forEach(({el, severity, issue, jumps}) => {
-        const itemKey = `${category}:${el.querySelector(".diag-message")?.textContent}`
-
-        if(openState.has(itemKey))
-          el.open = openState.get(itemKey)
-
-        group.appendChild(el)
-        this.#diagnostics.push({el, severity, issue})
-        jumps.forEach(jump =>
-          this.#diagnosticDisposer.register(Notify.on("click", () => this.#jump(jump), jump))
-        )
-      })
 
       container.appendChild(group)
     })
