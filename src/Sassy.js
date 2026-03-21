@@ -1,5 +1,5 @@
 import {Lint, Resolve, Theme, WriteStatus} from "@gesslar/sassy"
-import {Cache, Data, FileObject, FileSystem as FS, Glog} from "@gesslar/toolkit"
+import {Cache, Data, FileObject, FileSystem as FS, Glog, Sass} from "@gesslar/toolkit"
 import * as vscode from "vscode"
 
 import EventService from "./EventService.js"
@@ -544,7 +544,12 @@ class Sassy {
    */
   async #gotoLocation(location) {
     try {
-      const [filePath, lineStr, colStr] = location.split(":")
+      const {filePath, lineStr, colStr} =
+        /(?<filePath>.*):(?<lineStr>\d+):(?<colStr>\d+)$/.exec(location)?.groups ?? {}
+
+      if(!filePath || !lineStr || !colStr)
+        throw Sass.new(`Invalid location attempt. Received ${location}`)
+
       const line = Math.max(0, parseInt(lineStr, 10) - 1)
       const col = Math.max(0, parseInt(colStr, 10) - 1)
 

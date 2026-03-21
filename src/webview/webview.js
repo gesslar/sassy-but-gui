@@ -1,5 +1,4 @@
 import * as TK from "./vendor/toolkit.esm.js"
-import * as Elements from "https://file%2B.vscode-resource.vscode-cdn.net/projects/git/sassy-but-gui/node_modules/%40vscode-elements/elements/dist/bundled.js"
 
 const vscode = acquireVsCodeApi()
 
@@ -440,14 +439,7 @@ class WebSassy {
     })
   }
 
-  #applyDiagFilter(evt) {
-    const {target} = evt ?? {}
-
-    console.log(TK.Data.typeOf(target ?? {}))
-
-    if(target && target instanceof Elements.VscodeToolbarButton)
-      target.checked = !target.checked
-
+  #applyDiagFilter() {
     const filterText = this.#elements.diagFilter?.value?.toLowerCase() ?? ""
     const showErrors = this.#elements.filterErrors.checked
     const showWarnings = this.#elements.filterWarnings.checked
@@ -707,7 +699,7 @@ class WebSassy {
   #appendGroup(grid, template, entries, prefix = "") {
     const isLeaf = v => typeof v?.raw === "string" && typeof v?.value === "string"
 
-    this.#appendSectionHeader(grid, prefix)
+    prefix && this.#appendSectionHeader(grid, prefix)
 
     for(const [k, v] of Object.entries(entries)) {
       const label = prefix ? `${prefix}.${k}` : k
