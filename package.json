@@ -36,9 +36,10 @@
     "update": "npx npm-check-updates -u && npm install",
     "pr": "gt submit -p --ai",
     "lint": "eslint src/",
+    "prepackage": "node -e \"require('fs').readdirSync('vsix').filter(f=>f.endsWith('.vsix')).forEach(f=>require('fs').unlinkSync('vsix/'+f))\"",
     "package": "npx @vscode/vsce package --no-dependencies --skip-license -o vsix/",
-    "publish:vsce": "npm run package && xdg-open https://marketplace.visualstudio.com/manage/publishers/gesslar",
-    "publish:ovsx": "npm run package && xdg-open https://open-vsx.org/user-settings/extensions",
+    "publish:vsce": "npm run package && npx @vscode/vsce publish --packagePath vsix/*.vsix --pat $VSX_MARKETPLACE_ACCESS_TOKEN",
+    "publish:ovsx": "npm run package && npx ovsx publish --packagePath vsix/*.vsix --pat $OVSX_ACCESS_TOKEN",
     "patch": "npm version patch",
     "minor": "npm version minor",
     "major": "npm version major",
@@ -48,7 +49,7 @@
     "vscode": "^1.94.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "file:../sassy",
+    "@gesslar/sassy": "^5.20.0",
     "@gesslar/toolkit": "^4.4.0",
     "@gesslar/vscode-theme-schema": "^1.2.1",
     "@vscode-elements/elements": "^2.5.1",
