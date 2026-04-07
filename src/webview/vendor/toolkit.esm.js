@@ -1,4 +1,4 @@
-// @gesslar/toolkit v4.4.0 - ES module bundle
+// @gesslar/toolkit v5.0.1 - ES module bundle
 /**
  * @file Tantrum.js
  *
