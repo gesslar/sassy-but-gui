@@ -30,7 +30,7 @@
     "name": "gesslar",
     "url": "https://github.com/gesslar/sassy-but-gui"
   },
-  "license": "Unlicense",
+  "license": "0BSD",
   "type": "module",
   "scripts": {
     "update": "npx npm-check-updates -u && npm install",
@@ -49,17 +49,17 @@
     "vscode": "^1.94.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "^5.20.0",
-    "@gesslar/toolkit": "^4.4.0",
-    "@gesslar/vscode-theme-schema": "^1.2.1",
+    "@gesslar/sassy": "^5.20.1",
+    "@gesslar/toolkit": "^5.0.1",
+    "@gesslar/vscode-theme-schema": "^1.2.2",
     "@vscode-elements/elements": "^2.5.1",
     "@vscode/codicons": "^0.0.45",
     "@vscode/vsce": "^3.7.1"
   },
   "devDependencies": {
-    "@gesslar/uglier": "^2.2.0",
-    "esbuild": "^0.27.4",
-    "eslint": "^10.1.0"
+    "@gesslar/uglier": "^2.4.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^10.2.0"
   },
   "contributes": {
     "configurationDefaults": {

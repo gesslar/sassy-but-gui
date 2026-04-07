@@ -13,3 +13,4 @@ pnpm-*
 vsix/
 scripts/
 AGENTS.md
+jsconfig.json
