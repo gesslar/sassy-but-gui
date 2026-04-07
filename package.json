@@ -2,7 +2,7 @@
   "name": "sassy-but-gui",
   "displayName": "Sassy, but GUI",
   "publisher": "gesslar",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Sassy but GUI",
   "main": "./src/ritual-sacrifice-to-cjs.cjs",
   "repository": {
