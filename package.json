@@ -46,7 +46,8 @@
     "postinstall": "node scripts/postinstall.js"
   },
   "engines": {
-    "vscode": "^1.94.0"
+    "vscode": "^1.110.0",
+    "node": ">=24.11.0"
   },
   "dependencies": {
     "@gesslar/sassy": "^5.20.1",
