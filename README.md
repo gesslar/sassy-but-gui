@@ -164,7 +164,6 @@ when a `.sassy.yaml` file is selected.
 
 ## Requirements
 
-- VS Code 1.94.0 or later
 - A [Sassy](https://sassy.gesslar.io/) theme project with `.sassy.yaml`
   definition files
 
