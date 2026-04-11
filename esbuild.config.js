@@ -20,7 +20,7 @@ const config = {
   external: ["vscode", ...nodeBuiltins],
   format: "esm",
   platform: "node",
-  target: "node22",
+  target: "node24",
   sourcemap: !production,
   minify: production,
   banner,

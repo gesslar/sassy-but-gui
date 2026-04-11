@@ -36,6 +36,7 @@
     "update": "npx npm-check-updates -u && npm install",
     "pr": "gt submit -p --ai",
     "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "build": "node esbuild.config.js --production",
     "prepackage": "node scripts/assure-clean-vsix-directory.js",
     "package": "npm run build && npx @vscode/vsce package --no-dependencies --skip-license -o vsix/",
@@ -56,8 +57,7 @@
     "@gesslar/toolkit": "^5.0.1",
     "@gesslar/vscode-theme-schema": "^1.2.2",
     "@vscode-elements/elements": "^2.5.1",
-    "@vscode/codicons": "^0.0.45",
-    "@vscode/vsce": "^3.7.1"
+    "@vscode/codicons": "^0.0.45"
   },
   "devDependencies": {
     "@gesslar/uglier": "^2.4.0",
