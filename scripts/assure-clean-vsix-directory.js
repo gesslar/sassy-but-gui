@@ -14,7 +14,7 @@
 import {existsSync, mkdirSync, readdirSync, statSync, unlinkSync} from "node:fs"
 import {join, resolve} from "node:path"
 
-const dir = resolve(process.argv[2] || "vsix")
+const dir = "vsix"
 
 try {
   if(existsSync(dir)) {
