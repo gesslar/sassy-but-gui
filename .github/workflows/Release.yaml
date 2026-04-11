@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: "24"
 
-      - run: npm install --omit=dev
+      - run: npm install
 
       - run: npm run package
 
