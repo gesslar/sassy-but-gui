@@ -2,6 +2,7 @@ node_modules/
 out/
 .vscode-test/
 *.vsix
+vsix/
 temp/
 .vscode/
 work/
@@ -9,3 +10,5 @@ work/
 output/
 backup/
 fixtures/
+src/extension.mjs
+src/extension.mjs.map
