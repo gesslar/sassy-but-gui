@@ -1,7 +1,7 @@
 import uglify from "@gesslar/uglier"
 
 export default [
-  {ignores: ["**/vendor/**"]},
+  {ignores: ["**/vendor/**", "src/extension.mjs"]},
   ...uglify({
     with: [
       "lints-js", // default files: ["src/**/*.{js,mjs,cjs}"]
