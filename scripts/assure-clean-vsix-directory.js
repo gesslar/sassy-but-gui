@@ -11,7 +11,7 @@
  */
 
 import {existsSync, mkdirSync, readdirSync, statSync, unlinkSync} from "node:fs"
-import {join, resolve} from "node:path"
+import {join} from "node:path"
 
 const dir = "vsix"
 
