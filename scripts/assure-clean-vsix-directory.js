@@ -6,9 +6,8 @@
  * built package.
  *
  * Usage:
- *   node scripts/clean-vsix.js [dir]
+ *   node scripts/clean-vsix.js
  *
- * If [dir] is omitted, defaults to "vsix/" relative to cwd.
  */
 
 import {existsSync, mkdirSync, readdirSync, statSync, unlinkSync} from "node:fs"
