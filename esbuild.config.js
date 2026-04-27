@@ -23,6 +23,7 @@ const config = {
   target: "node24",
   sourcemap: !production,
   minify: production,
+  keepNames: true,
   banner,
 }
 
