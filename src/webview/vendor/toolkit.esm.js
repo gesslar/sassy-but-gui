@@ -1,4 +1,4 @@
-// @gesslar/toolkit v5.0.1 - ES module bundle
+// @gesslar/toolkit v5.2.0 - ES module bundle
 /**
  * @file Tantrum.js
  *
@@ -318,20 +318,35 @@ class Sass extends Error {
 
 
 /**
+ * Options for type validation methods.
+ *
+ * @typedef {object} TypeValidationOptions
+ * @property {boolean} [allowEmpty=true] - Whether empty values are allowed
+ */
+
+/**
  * Validation utility class providing type checking and assertion methods.
  */
 class Valid {
+  /** @type {typeof Sass} */
+  static _Sass = Sass
+
   /**
    * Validates a value against a type. Uses Data.isType.
    *
    * @param {unknown} value - The value to validate
    * @param {string} type - The expected type in the form of "object", "object[]", "object|object[]"
-   * @param {object} [options] - Additional options for validation.
+   * @param {TypeValidationOptions} [options] - Additional options for validation.
    */
   static type(value, type, options) {
-    Valid.assert(
+    const expected = [type];
+
+    if(options?.allowEmpty !== true)
+      expected.push("[no empty values]");
+
+    this.assert(
       Data.isType(value, type, options),
-      `Invalid type. Expected ${type}, got ${Data.typeOf(value)}`
+      `Invalid type. Expected ${expected.join(" ")}, got ${Data.typeOf(value)}`
     );
   }
 
@@ -345,23 +360,20 @@ class Valid {
    *                         met (optional)
    */
   static assert(condition, message, arg = null) {
-    if(!Data.isType(condition, "boolean")) {
-      throw Sass.new(`Condition must be a boolean, got ${condition}`)
-    }
+    if(!Data.isType(condition, "boolean"))
+      throw this._Sass.new(`Condition must be a boolean, got ${condition}`)
 
-    if(!Data.isType(message, "string")) {
-      throw Sass.new(`Message must be a string, got ${message}`)
-    }
+    if(!Data.isType(message, "string"))
+      throw this._Sass.new(`Message must be a string, got ${message}`)
 
-    if(!(arg === null || arg === undefined || typeof arg === "number")) {
-      throw Sass.new(`Arg must be a number, got ${arg}`)
-    }
+    if(!(arg === null || arg === undefined || typeof arg === "number"))
+      throw this._Sass.new(`Arg must be a number, got ${arg}`)
 
     if(!condition)
-      throw Sass.new(`${message}${arg ? `: ${arg}` : ""}`)
+      throw this._Sass.new(`${message}${arg ? `: ${arg}` : ""}`)
   }
 
-  static #restrictedProto = ["__proto__", "constructor", "prototype"]
+  static #restrictedProto = Object.freeze(["__proto__", "constructor", "prototype"])
 
   /**
    * Protects against prototype pollution by checking keys for dangerous property names.
@@ -371,11 +383,13 @@ class Valid {
    * @throws {Sass} If any key matches restricted prototype properties (__proto__, constructor, prototype)
    */
   static prototypePollutionProtection(keys) {
-    Valid.type(keys, "String[]");
+    this.type(keys, "String[]");
 
-    const oopsIDidItAgain = Collection.intersection(this.#restrictedProto, keys);
+    const oopsIDidItAgain = Collection.intersection(
+      Valid.#restrictedProto, keys
+    );
 
-    Valid.assert(
+    this.assert(
       oopsIDidItAgain.length === 0,
       `We don't pee in your pool, don't pollute ours with your ${String(oopsIDidItAgain)}`
     );
@@ -761,7 +775,7 @@ class TypeSpec {
       // Handle non-array values
       if(!isArray && !allowedArray) {
         if(valueType === allowedType)
-          return allowEmpty || !empty
+          return Data.isBaseType(value, allowedType) && (allowEmpty || !empty)
 
         if(valueType === "Null" || valueType === "Undefined")
           return false

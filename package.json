@@ -74,22 +74,22 @@
     "commands": [
       {
         "command": "sassy.showPanel",
-        "title": "Show Sassy Panel",
+        "title": "sassy: Show Sassy Panel",
         "icon": "$(color-mode)"
       },
       {
         "command": "sassy.buildTheme",
-        "title": "Build Theme",
+        "title": "sassy: Build Theme",
         "icon": "$(export)"
       },
       {
         "command": "sassy.enableAutoBuild",
-        "title": "Enable Auto-Build",
+        "title": "sassy: Enable Auto-Build",
         "icon": "$(sync)"
       },
       {
         "command": "sassy.disableAutoBuild",
-        "title": "Disable Auto-Build",
+        "title": "sassy: Disable Auto-Build",
         "icon": "$(sync-ignored)"
       }
     ],
