@@ -4,7 +4,7 @@
 
 let esm
 
-const WhatWeCameHereFor = "./Sassy.js"
+const WhatWeCameHereFor = "./extension.mjs"
 
 /**
  * Ensures the ESM module is loaded.

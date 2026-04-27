@@ -14,3 +14,5 @@ vsix/
 scripts/
 AGENTS.md
 jsconfig.json
+src/Sassy.js
+src/SassyPanel.js
