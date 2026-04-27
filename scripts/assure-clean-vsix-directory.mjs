@@ -25,7 +25,7 @@ try {
         await file.delete()
 
       for(const directory of directories)
-        await directory.delete()
+        await rmdir(directory)
 
       await d.delete()
     }
