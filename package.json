@@ -61,7 +61,7 @@
   },
   "devDependencies": {
     "@gesslar/uglier": "^2.4.1",
-    "@types/vscode": "^1.116.0",
+    "@types/vscode": "^1.118.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.2.1"
   },
