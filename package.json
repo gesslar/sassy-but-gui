@@ -33,7 +33,7 @@
   "license": "0BSD",
   "type": "module",
   "scripts": {
-    "update": "npx npm-check-updates -u && npm install",
+    "update": "npx -y npm-check-updates -u && npm install",
     "pr": "gt submit -p --ai",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -53,8 +53,8 @@
     "node": ">=24.11.0"
   },
   "dependencies": {
-    "@gesslar/sassy": "^5.20.2",
-    "@gesslar/toolkit": "^5.8.0",
+    "@gesslar/sassy": "^5.20.4",
+    "@gesslar/toolkit": "^5.9.1",
     "@gesslar/vscode-theme-schema": "^1.2.2",
     "@vscode-elements/elements": "^2.5.1",
     "@vscode/codicons": "^0.0.45"
@@ -63,7 +63,7 @@
     "@gesslar/uglier": "^2.4.1",
     "@types/vscode": "^1.125.0",
     "esbuild": "^0.28.1",
-    "eslint": "^10.7.0"
+    "eslint": "^10.8.0"
   },
   "contributes": {
     "configurationDefaults": {

@@ -1,4 +1,4 @@
-// @gesslar/toolkit v5.2.0 - ES module bundle
+// @gesslar/toolkit v5.9.1 - ES module bundle
 /**
  * @file Tantrum.js
  *
@@ -208,17 +208,15 @@ class Sass extends Error {
       );
     }
 
-    if(this.cause) {
+    if(this.cause && nerdMode) {
       if(typeof this.cause.report === "function") {
-        if(nerdMode) {
-          console.error(
-            "\n" +
-            `[error] Caused By`
-          );
-        }
+        console.error(
+          "\n" +
+          `[error] Caused By`
+        );
 
         this.cause.report(nerdMode, true);
-      } else if(nerdMode && this.cause.stack) {
+      } else if(this.cause.stack) {
         console.error();
         console.group();
         console.error(
@@ -561,26 +559,38 @@ class Util {
       Valid.type(supplied, "String", {allowEmpty: false});
       Valid.type(target, "String", {allowEmpty: false});
 
-      const suppliedSemver = supplied.split(".").filter(Boolean).map(Number).filter(e => !isNaN(e));
-      const targetSemver = target.split(".").filter(Boolean).map(Number).filter(e => !isNaN(e));
+      const {major: sMajor, minor: sMinor, patch: sPatch} =
+        this.semver.basic.exec(supplied)?.groups ?? {};
+      const {major: tMajor, minor: tMinor, patch: tPatch} =
+        this.semver.basic.exec(target)?.groups ?? {};
 
-      Valid.assert(suppliedSemver.length === 3, "Invalid format for supplied semver.");
-      Valid.assert(targetSemver.length === 3, "Invalid format for target semver.");
+      Valid.assert(Boolean(sMajor && sMinor && sPatch), "Invalid format for supplied semver.");
+      Valid.assert(Boolean(tMajor && tMinor && tPatch), "Invalid format for target semver.");
 
-      if(suppliedSemver[0] < targetSemver[0])
+      const isMajor = Number(sMajor);
+      const itMajor = Number(tMajor);
+      if(isMajor < itMajor)
         return false
 
-      if(suppliedSemver[0] === targetSemver[0]) {
-        if(suppliedSemver[1] < targetSemver[1])
+      if(isMajor === itMajor) {
+        const isMinor = Number(sMinor);
+        const itMinor = Number(tMinor);
+        if(isMinor < itMinor)
           return false
 
-        if(suppliedSemver[1] === targetSemver[1])
-          if(suppliedSemver[2] < targetSemver[2])
+        if(isMinor === itMinor) {
+          const isPatch = Number(sPatch);
+          const itPatch = Number(tPatch);
+          if(isPatch < itPatch)
             return false
+        }
       }
 
       return true
-    }
+    },
+
+    basic: /^(?<major>0|(?:[1-9]\d*))\.(?<minor>0|(?:[1-9]\d*))\.(?<patch>0|(?:[1-9]\d*))$/,
+    enhanced: /^(?<major>0|(?:[1-9]\d*))\.(?<minor>0|(?:[1-9]\d*))\.(?<patch>0|(?:[1-9]\d*))(?:-(?<prerelease>(?:0|(?:[1-9A-Za-z-][0-9A-Za-z-]*))(?:\.(?:0|(?:[1-9A-Za-z-][0-9A-Za-z-]*)))*))?(?:\+(?<build>(?:0|(?:[1-9A-Za-z-][0-9A-Za-z-]*))(?:\.(?:0|(?:[1-9A-Za-z-][0-9A-Za-z-]*)))*))?$/
   }
 }
 
