@@ -63,7 +63,7 @@
     "@gesslar/uglier": "^2.4.1",
     "@types/vscode": "^1.134.0",
     "esbuild": "^0.28.2",
-    "eslint": "^10.9.0"
+    "eslint": "^10.9.1"
   },
   "contributes": {
     "configurationDefaults": {
